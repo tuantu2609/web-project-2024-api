@@ -1,9 +1,9 @@
 {
   "development": {
-    "username": "root",
-    "password": null,
-    "database": "webdb",
-    "host": "localhost",
+    "username": "admin",
+    "password": "T123456789",
+    "database": "myappdb",
+    "host": "mydatabase.cf6i04m4ez0i.ap-southeast-2.rds.amazonaws.com",
     "dialect": "mysql"
   },
   "test": {
