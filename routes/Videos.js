@@ -1,6 +1,20 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
+const dotenv = require("dotenv");
 const { Videos } = require("../models");
+
+dotenv.config();
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
 
 /**
  * @swagger
@@ -36,67 +50,55 @@ const { Videos } = require("../models");
  *         description: Internal server error
  */
 router.get("/", async (req, res) => {
-    const videos = await Videos.findAll();
-    res.json(videos);
+  const videos = await Videos.findAll();
+  res.json(videos);
 });
 
-/**
- * @swagger
- * /videos:
- *   post:
- *     summary: Creates a new video entry
- *     tags:
- *       - Videos
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               videoTitle:
- *                 type: string
- *                 description: The title of the video
- *                 example: "Introduction - Full Stack Web Development Course [1] - ReactJS, NodeJS, Express, MySQL"
- *               videoDesc:
- *                 type: string
- *                 description: A brief description of the video
- *                 example: "Hey everyone, this is the first episode of this series where I will show how to create a full stack web app!"
- *               videoURL:
- *                 type: string
- *                 format: uri
- *                 description: The URL of the video
- *                 example: "https://example.com/video.mp4"
- *     responses:
- *       201:
- *         description: The newly created video entry
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 id:
- *                   type: integer
- *                   description: The unique identifier for the video
- *                 videoTitle:
- *                   type: string
- *                   description: The title of the video
- *                 videoDesc:
- *                   type: string
- *                   description: A brief description of the video
- *                 videoURL:
- *                   type: string
- *                   format: uri
- *                   description: The URL of the video
- *       400:
- *         description: Bad Request - Invalid input data
- *       500:
- *         description: Internal server error
- */
-router.post("/", async (req, res) => {
-    const { videoTitle, videoDesc, videoURL } = req.body;
-    const newVideo = await Videos.create({ videoTitle, videoDesc, videoURL });
-    res.json(newVideo);
+router.post("/", upload.single("video"), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded." });
+    }
+
+    const { videoTitle, videoDesc } = req.body;
+
+    const uploadResult = await cloudinary.uploader.upload_stream(
+      {
+        resource_type: "video",
+        folder: "videosSrc",
+      },
+      async (error, uploadResult) => {
+        if (error) {
+          console.error("Cloudinary Upload Error:", error);
+          return res
+            .status(500)
+            .json({ message: "Upload to Cloudinary failed.", error });
+        }
+
+        const videoURL = uploadResult.secure_url;
+        const videoDuration = uploadResult.duration;
+
+        const newVideo = await Videos.create({
+          videoTitle,
+          videoDesc,
+          videoURL,
+          videoDuration,
+        });
+
+        res.status(201).json({
+          message: "Upload successful",
+          data: newVideo,
+        });
+      }
+    );
+
+    uploadResult.end(req.file.buffer);
+  } catch (error) {
+    console.error("Upload Error:", error);
+    res
+      .status(500)
+      .json({ message: "Server error during upload.", error: error.message });
+  }
 });
 
 module.exports = router;
