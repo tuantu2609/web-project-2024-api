@@ -5,11 +5,15 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
         },
         videoDesc: {
-            type: DataTypes.STRING,
+            type: DataTypes.TEXT,
             allowNull: false,
         },
         videoURL: {
             type: DataTypes.STRING,
+            allowNull: false,
+        },
+        videoDuration: {
+            type: DataTypes.FLOAT,
             allowNull: false,
         },
     });
