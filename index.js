@@ -15,6 +15,8 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Routers
 const videoRouter = require("./routes/Videos");
 app.use("/videos", videoRouter);
+const userRouter = require("./routes/Users");
+app.use("/users", userRouter);
 
 db.sequelize.sync().then(() => {
     app.listen(3001, () => {
