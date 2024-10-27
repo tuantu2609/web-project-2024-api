@@ -1,20 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const dotenv = require("dotenv");
-const { Videos } = require("../models");
-
-dotenv.config();
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = require("../middlewares/UploadMiddleware");
+const {
+  getAllVideos,
+  uploadVideo,
+} = require("../controllers/videosController");
 
 /**
  * @swagger
@@ -36,69 +26,77 @@ const upload = multer({ storage });
  *                   id:
  *                     type: integer
  *                     description: The unique identifier for the video
- *                   title:
+ *                   videoTitle:
  *                     type: string
  *                     description: The title of the video
- *                   description:
+ *                   videoDesc:
  *                     type: string
  *                     description: A brief description of the video
- *                   url:
+ *                   videoURL:
  *                     type: string
  *                     format: uri
  *                     description: The URL of the video
+ *                   videoDuration:
+ *                     type: number
+ *                     format: float
+ *                     description: The duration of the video in seconds
+ *                   createdAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time the video was uploaded
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The date and time the video was last updated
  *       500:
  *         description: Internal server error
  */
-router.get("/", async (req, res) => {
-  const videos = await Videos.findAll();
-  res.json(videos);
-});
+router.get("/", getAllVideos);
 
-router.post("/", upload.single("video"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded." });
-    }
-
-    const { videoTitle, videoDesc } = req.body;
-
-    const uploadResult = await cloudinary.uploader.upload_stream(
-      {
-        resource_type: "video",
-        folder: "videosSrc",
-      },
-      async (error, uploadResult) => {
-        if (error) {
-          console.error("Cloudinary Upload Error:", error);
-          return res
-            .status(500)
-            .json({ message: "Upload to Cloudinary failed.", error });
-        }
-
-        const videoURL = uploadResult.secure_url;
-        const videoDuration = uploadResult.duration;
-
-        const newVideo = await Videos.create({
-          videoTitle,
-          videoDesc,
-          videoURL,
-          videoDuration,
-        });
-
-        res.status(201).json({
-          message: "Upload successful",
-          data: newVideo,
-        });
-      }
-    );
-
-    uploadResult.end(req.file.buffer);
-  } catch (error) {
-    console.error("Upload Error:", error);
-    res
-      .status(500)
-      .json({ message: "Server error during upload.", error: error.message });
-  }
-});
+/**
+ * @swagger
+ * /videos:
+ *   post:
+ *     summary: Upload a new video
+ *     tags:
+ *       - Videos
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoTitle:
+ *                 type: string
+ *                 description: The title of the video
+ *               videoDesc:
+ *                 type: text
+ *                 description: The description of the video
+ *               video:
+ *                 type: string
+ *                 format: binary
+ *                 description: The video file to upload
+ *     responses:
+ *       201:
+ *         description: Upload successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 videoTitle:
+ *                   type: string
+ *                 videoDesc:
+ *                   type: string
+ *                 videoURL:
+ *                   type: string
+ *                   description: The URL of the uploaded video
+ *       400:
+ *         description: No file uploaded.
+ *       500:
+ *         description: Internal server error.
+ */
+router.post("/", upload.single("video"), uploadVideo);
 
 module.exports = router;
