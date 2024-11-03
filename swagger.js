@@ -8,6 +8,18 @@ const options = {
       title: "Express API with Swagger",
       version: "1.0.0",
     },
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT"
+        }
+      }
+    },
+    security: [{
+      bearerAuth: []  // Áp dụng xác thực bearerAuth cho toàn bộ API (tùy chọn)
+    }]
   },
   apis: ["./routes/*.js"],
 };

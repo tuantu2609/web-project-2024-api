@@ -6,6 +6,8 @@ const { swaggerUi, swaggerSpec } = require('./swagger'); // Đường dẫn tớ
 app.use(express.json());
 app.use(cors());
 
+require('dotenv').config();
+
 const db = require("./models");
 
 
@@ -16,7 +18,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 const videoRouter = require("./routes/Videos");
 app.use("/videos", videoRouter);
 const userRouter = require("./routes/Users");
-app.use("/users", userRouter);
+app.use("/auth", userRouter);
 
 db.sequelize.sync().then(() => {
     app.listen(3001, () => {
