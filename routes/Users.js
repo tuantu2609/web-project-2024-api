@@ -1,9 +1,8 @@
 const { default: axios, get } = require("axios");
 const express = require("express");
 const router = express.Router();
-const { getAllUsers, createUser, loginUser } = require("../controllers/usersController");
+const { getAllUsers, createUser, loginUser, authUser } = require("../controllers/usersController");
 const { validateToken } = require("../middlewares/AuthMiddleware");
-const { authUser } = require("../controllers/usersController");
 
 router.get("/", getAllUsers);
 
