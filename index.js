@@ -21,6 +21,9 @@ const authRouter = require("./routes/Users");
 app.use("/auth", authRouter);
 const userRouter = require("./routes/UserDetails");
 app.use("/user", userRouter);
+const courseRoutes = require("./routes/Courses");
+app.use("/courses", courseRoutes);
+
 
 
 db.sequelize.sync().then(() => {
