@@ -1,4 +1,4 @@
-const { Videos } = require("../models");
+const { Videos, CourseVideos } = require("../models");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
 
@@ -30,7 +30,11 @@ const uploadVideo = async (req, res) => {
       return res.status(400).json({ message: "No file uploaded." });
     }
 
-    const { videoTitle, videoDesc } = req.body;
+    const { videoTitle, videoDesc, courseID } = req.body;
+
+    if (!courseID) {
+      return res.status(400).json({ message: "Course ID is required." });
+    }
 
     const uploadStream = cloudinary.uploader.upload_stream(
       {
@@ -53,6 +57,11 @@ const uploadVideo = async (req, res) => {
           videoDesc,
           videoURL,
           videoDuration,
+        });
+
+        await CourseVideos.create({
+          courseId: courseID,  
+          videoId: newVideo.id,  
         });
 
         res.status(201).json({
