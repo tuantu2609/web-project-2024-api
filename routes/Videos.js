@@ -5,6 +5,8 @@ const {
   getAllVideos,
   uploadVideo,
 } = require("../controllers/videosController");
+const { validateToken } = require("../middlewares/AuthMiddleware");
+
 
 /**
  * @swagger
@@ -51,7 +53,7 @@ const {
  *       500:
  *         description: Internal server error
  */
-router.get("/", getAllVideos);
+router.get("/", validateToken, getAllVideos);
 
 /**
  * @swagger
@@ -97,6 +99,6 @@ router.get("/", getAllVideos);
  *       500:
  *         description: Internal server error.
  */
-router.post("/", upload.single("video"), uploadVideo);
+router.post("/", validateToken, upload.single("video"), uploadVideo);
 
 module.exports = router;

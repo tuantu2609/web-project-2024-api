@@ -4,8 +4,7 @@ const router = express.Router();
 const { getAllUsers, createUser, loginUser, authUser } = require("../controllers/usersController");
 const { validateToken } = require("../middlewares/AuthMiddleware");
 
-router.get("/", getAllUsers);
-
+router.get("/", getAllUsers); // For admin purposes only
 
 /**
  * @swagger
