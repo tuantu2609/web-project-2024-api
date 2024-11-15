@@ -13,7 +13,6 @@ const getAllCourses = async (req, res) => {
   }
 };
 
-
 /**
  * Get all courses by instructor ID
  */
@@ -36,7 +35,6 @@ const getAllCoursesByID = async (req, res) => {
     return res.status(500).json({ message: "Internal server error." });
   }
 };
-
 
 /**
  * Get one course by ID

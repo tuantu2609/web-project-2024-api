@@ -17,6 +17,18 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
     });
+
+    CourseVideos.associate = (models) => {
+      CourseVideos.belongsTo(models.Videos, {
+        foreignKey: "videoId",
+        as: "Video",
+      });
+    
+      CourseVideos.belongsTo(models.Courses, {
+        foreignKey: "courseId",
+        as: "Course",
+      });
+    };
   
     return CourseVideos;
   };
