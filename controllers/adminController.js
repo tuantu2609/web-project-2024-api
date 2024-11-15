@@ -1,9 +1,9 @@
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const { sign } = require("jsonwebtoken");
 const { Admin } = require("../models");
-const JWT_ADMIN = process.env.JWT_ADMIN || "adminsercretToken";
+const JWT_ADMIN = process.env.JWT_ADMIN || "adminSecretToken";
 
-exports.login = async (req, res) => {
+const loginAdmin = async (req, res) => {
   const { username, password } = req.body;
 
   try {
@@ -17,21 +17,29 @@ exports.login = async (req, res) => {
       return res.status(401).json({ error: "Incorrect password" });
     }
 
-    const token = jwt.sign(
+    const token = sign(
       { id: admin.id, username: admin.username, role: "admin" },
-      JWT_ADMIN,
-      { expiresIn: "1h" }
+      JWT_ADMIN
     );
 
     res.json({
       message: "Login successful",
       token,
       fullName: admin.username,
-      role: "admin",
       id: admin.id,
+      role: "admin",
     });
   } catch (error) {
     console.error("Error during admin login:", error);
     res.status(500).json({ error: "Internal server error" });
   }
+};
+
+const authUser = async (req, res) => {
+  res.json(req.admin);
+};
+
+module.exports = {
+  loginAdmin,
+  authUser
 };
