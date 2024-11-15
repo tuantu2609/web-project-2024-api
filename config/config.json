@@ -1,8 +1,8 @@
 {
   "development": {
     "username": "root",
-    "password": "Thong@2003",
-    "database": "myweb",
+    "password": null,
+    "database": "webdb",
     "host": "localhost",
     "dialect": "mysql"
   },
