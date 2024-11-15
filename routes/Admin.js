@@ -1,14 +1,10 @@
 const express = require("express");
 const router = express.Router();
-const adminController = require("../controllers/adminController");
-const adminMiddleware = require("../middlewares/AdminMiddleware");
+const { loginAdmin, authUser } = require("../controllers/adminController");
+const { validateAdminToken } = require("../middlewares/AdminMiddleware");
 
 // Route for admin login
-router.post("/login", adminController.login);
+router.post("/login", loginAdmin);
 
-// Example of a protected route (dashboard)
-router.get("/dashboard", adminMiddleware, (req, res) => {
-  res.json({ message: "Welcome to the admin dashboard" });
-});
-
+router.get("/auth", validateAdminToken, authUser);
 module.exports = router;
