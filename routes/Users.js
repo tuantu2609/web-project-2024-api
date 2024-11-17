@@ -8,7 +8,10 @@ const {
   authUser,
   sendEmailVerification,
   verifyCode,
-  checkDuplicate
+  checkDuplicate,
+  sendResetCode,
+  verifyResetCode,
+  resetPassword
 } = require("../controllers/usersController");
 const { validateToken } = require("../middlewares/AuthMiddleware");
 const rateLimit = require("express-rate-limit");
@@ -168,5 +171,11 @@ router.post("/send-email", emailLimiter, sendEmailVerification);
 router.post("/verify-code", verifyCode);
 
 router.post("/check-duplicate", checkDuplicate);
+
+router.post("/send-reset-code", sendResetCode);
+
+router.post("/verify-reset-code", verifyResetCode);
+
+router.post("/reset-password", resetPassword);
 
 module.exports = router;

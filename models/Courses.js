@@ -13,6 +13,10 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 'draft',
       },
+      thumbnail: {
+        type: DataTypes.STRING, // Lưu đường dẫn ảnh thumbnail
+        allowNull: true,        // Có thể để null nếu chưa có thumbnail
+      },
     });
   
     Courses.associate = (models) => {

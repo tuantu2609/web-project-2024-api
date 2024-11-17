@@ -1,4 +1,12 @@
-const { Courses, Enrollments } = require("../models");
+const { Courses, Enrollments, Accounts, UserDetails } = require("../models");
+const cloudinary = require("cloudinary").v2;
+const streamifier = require("streamifier");
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 /**
  * Get all courses for all instructors
@@ -41,8 +49,25 @@ const getAllCoursesByID = async (req, res) => {
  */
 const getOneCourse = async (req, res) => {
   const { id } = req.params;
+
   try {
-    const course = await Courses.findOne({ where: { id } });
+    const course = await Courses.findOne({
+      where: { id },
+      include: [
+        {
+          model: Accounts, // Bảng Accounts
+          as: "Instructor",
+          attributes: ["id"],
+          include: [
+            {
+              model: UserDetails, // Bảng UserDetails
+              attributes: ["fullName"], // Chỉ lấy fullName
+            },
+          ],
+        },
+      ],
+    });
+
     if (course) {
       res.json(course);
     } else {
@@ -77,6 +102,50 @@ const createCourse = async (req, res) => {
         .json({
           error: "Course with this title already exists for this instructor",
         });
+    }
+
+    let thumbnailURL = null;
+
+    if (req.file) {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: "image", //Type of file
+          folder: "courseThumbnails", //Store in folder courseThumbnails
+        },
+        async (error, uploadResult) => {
+          if (error) {
+            console.error("Cloudinary Upload Error:", error);
+            return res.status(500).json({
+              error: "Failed to upload thumbnail to Cloudinary",
+            });
+          }
+
+          try {
+            thumbnailURL = uploadResult.secure_url; //URL thumbnail
+
+            //Create new course
+            const newCourse = await Courses.create({
+              courseTitle,
+              courseDesc,
+              instructorId,
+              thumbnail: thumbnailURL,
+            });
+
+            return res.status(201).json({
+              message: "Course created successfully",
+              course: newCourse,
+            });
+          } catch (dbError) {
+            console.error("Database Error:", dbError);
+            return res.status(500).json({
+              error: "Failed to save course to database.",
+            });
+          }
+        }
+      );
+
+      // Using streamifier to convert buffer to readable stream
+      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
     } else {
       const newCourse = await Courses.create({
         courseTitle,

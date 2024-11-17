@@ -9,39 +9,47 @@ const { sendEmail } = require("../services/emailService");
 // Bộ nhớ tạm thời cho mã xác thực
 const verificationCodes = {};
 
-const sendEmailVerification = async (req, res) => {
-  const { email, code } = req.body;
+const resetCodes = {};
 
-  if (!email || !code) {
-    return res.status(400).json({ error: "Email and code are required." });
+const sendEmailVerification = async (req, res) => {
+  const { email } = req.body; // Không cần nhận `code` từ client
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required." });
   }
 
   try {
+    // Tạo mã xác minh ngẫu nhiên (5 chữ số)
+    const code = Math.floor(10000 + Math.random() * 90000);
+
     const htmlContent = `
-          <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; text-align: center;">
-  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
-    <h1 style="color: #4CAF50;">Welcome to Our App!</h1>
-    <p style="font-size: 16px; color: #333;">Use the verification code below to complete your registration:</p>
-    <div style="font-size: 32px; font-weight: bold; color: #4CAF50; margin: 20px 0;">
-      ${code}
-    </div>
-    <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
-    <a href="http://localhost:3000/" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 10px 20px; border-radius: 4px; display: inline-block; margin-top: 20px;">Visit Our Website</a>
-  </div>
-  <p style="font-size: 12px; color: #777; margin-top: 20px;">&copy; 2024 Your Company. All rights reserved.</p>
-</div>
+      <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; text-align: center;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+          <h1 style="color: #4CAF50;">Welcome to Our App!</h1>
+          <p style="font-size: 16px; color: #333;">Use the verification code below to complete your registration:</p>
+          <div style="font-size: 32px; font-weight: bold; color: #4CAF50; margin: 20px 0;">
+            ${code}
+          </div>
+          <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+          <a href="http://localhost:3000/" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 10px 20px; border-radius: 4px; display: inline-block; margin-top: 20px;">Visit Our Website</a>
+        </div>
+        <p style="font-size: 12px; color: #777; margin-top: 20px;">&copy; 2024 Your Company. All rights reserved.</p>
+      </div>
     `;
 
+    // Lưu mã xác minh vào bộ nhớ tạm thời
     verificationCodes[email] = code;
 
+    // Xóa mã sau 10 phút
     setTimeout(() => {
       delete verificationCodes[email];
     }, 10 * 60 * 1000);
 
+    // Gửi email chứa mã xác minh
     await sendEmail(
       email,
       "Your Verification Code",
-      `Your verification code is: ${code}`, // Fallback text
+      `Your verification code is: ${code}`, // Nội dung fallback
       htmlContent
     );
 
@@ -66,6 +74,100 @@ const verifyCode = async (req, res) => {
     return res.status(200).json({ message: "Verification successful." });
   } else {
     return res.status(400).json({ error: "Invalid or expired verification code." });
+  }
+};
+
+// API gửi mã xác minh đặt lại mật khẩu
+const sendResetCode = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ error: "Email is required." });
+  }
+
+  try {
+    // Tạo mã xác minh ngẫu nhiên (5 chữ số)
+    const code = Math.floor(10000 + Math.random() * 90000);
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; text-align: center;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+          <h1 style="color: #4CAF50;">Password Reset Request</h1>
+          <p style="font-size: 16px; color: #333;">Use the verification code below to reset your password:</p>
+          <div style="font-size: 32px; font-weight: bold; color: #4CAF50; margin: 20px 0;">
+            ${code}
+          </div>
+          <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+        </div>
+        <p style="font-size: 12px; color: #777; margin-top: 20px;">&copy; 2024 Your Company. All rights reserved.</p>
+      </div>
+    `;
+
+    // Lưu mã xác minh vào bộ nhớ tạm thời
+    resetCodes[email] = code;
+
+    // Xóa mã sau 10 phút để tránh lạm dụng
+    setTimeout(() => {
+      delete resetCodes[email];
+    }, 10 * 60 * 1000);
+
+    // Gửi email chứa mã xác minh
+    await sendEmail(
+      email,
+      "Password Reset Verification Code",
+      `Your password reset verification code is: ${code}`, // Nội dung fallback
+      htmlContent
+    );
+
+    res.status(200).json({ message: "Password reset code sent successfully." });
+  } catch (error) {
+    console.error("Error sending reset email:", error);
+    res.status(500).json({ error: "Failed to send password reset email." });
+  }
+};
+
+const verifyResetCode = async (req, res) => {
+  const { email, code } = req.body;
+
+  if (!email || !code) {
+    return res.status(400).json({ error: "Email and code are required." });
+  }
+
+  // Kiểm tra mã xác thực trong bộ nhớ `resetCodes`
+  if (resetCodes[email] && String(resetCodes[email]) === String(code)) {
+    // Nếu mã khớp, xóa mã khỏi bộ nhớ tạm
+    delete resetCodes[email];
+    return res.status(200).json({ message: "Verification successful." });
+  } else {
+    return res.status(400).json({ error: "Invalid or expired verification code." });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ error: "Email and password are required." });
+  }
+
+  try {
+    // Tìm người dùng theo email
+    const user = await Accounts.findOne({ where: { email } });
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Mã hóa mật khẩu mới
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Cập nhật mật khẩu trong cơ sở dữ liệu
+    await user.update({ password: hashedPassword });
+
+    res.status(200).json({ message: "Password reset successfully." });
+  } catch (error) {
+    console.error("Error resetting password:", error);
+    res.status(500).json({ error: "Failed to reset password." });
   }
 };
 
@@ -251,5 +353,8 @@ module.exports = {
   getUserDetail,
   sendEmailVerification,
   verifyCode,
-  checkDuplicate
+  checkDuplicate,
+  sendResetCode,
+  verifyResetCode,
+  resetPassword
 };
