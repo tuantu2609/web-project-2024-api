@@ -1,4 +1,4 @@
-const { Courses } = require("../models");
+const { Courses, Enrollments } = require("../models");
 
 /**
  * Get all courses for all instructors
@@ -92,9 +92,69 @@ const createCourse = async (req, res) => {
   }
 };
 
+const enrollInCourse = async (req, res) => {
+  const { courseId } = req.body;
+  const studentId = req.user.id;
+
+  try {
+    // Kiểm tra nếu đã enroll vào khóa học
+    const existingEnrollment = await Enrollments.findOne({
+      where: {
+        studentId,
+        courseId,
+      },
+    });
+
+    if (existingEnrollment) {
+      return res.status(400).json({ message: "You are already enrolled in this course." });
+    }
+
+    // Thêm dữ liệu vào bảng Enrollments
+    const newEnrollment = await Enrollments.create({
+      studentId,
+      courseId,
+      // progress: 0,
+      // completed: false,
+    });
+
+    return res.status(201).json({
+      message: "Successfully enrolled in the course.",
+      enrollment: newEnrollment,
+    });
+  } catch (error) {
+    console.error("Error enrolling in course:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+const checkEnrollment = async (req, res) => {
+  const { courseId } = req.params;
+  const studentId = req.user.id;
+
+  try {
+    const enrollment = await Enrollments.findOne({
+      where: {
+        studentId,
+        courseId,
+      },
+    });
+
+    if (enrollment) {
+      return res.json({ enrolled: true });
+    } else {
+      return res.json({ enrolled: false });
+    }
+  } catch (error) {
+    console.error("Error checking enrollment:", error);
+    return res.status(500).json({ message: "Internal server error." });
+  }
+};
+
 module.exports = {
   getAllCourses,
   getOneCourse,
   createCourse,
-  getAllCoursesByID
+  getAllCoursesByID,
+  enrollInCourse,
+  checkEnrollment
 };

@@ -23,7 +23,8 @@ module.exports = (sequelize, DataTypes) => {
       },
       progress: {
         type: DataTypes.FLOAT,
-        allowNull: true,
+        allowNull: false, // Không cho phép null
+        defaultValue: 0,
       },
       completed: {
         type: DataTypes.BOOLEAN,

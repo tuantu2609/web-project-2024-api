@@ -8,6 +8,11 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      status: {
+        type: DataTypes.ENUM('draft', 'active'),
+        allowNull: false,
+        defaultValue: 'draft',
+      },
     });
   
     Courses.associate = (models) => {

@@ -1,8 +1,23 @@
 const { default: axios, get } = require("axios");
 const express = require("express");
 const router = express.Router();
-const { getAllUsers, createUser, loginUser, authUser } = require("../controllers/usersController");
+const {
+  getAllUsers,
+  createUser,
+  loginUser,
+  authUser,
+  sendEmailVerification,
+  verifyCode,
+  checkDuplicate
+} = require("../controllers/usersController");
 const { validateToken } = require("../middlewares/AuthMiddleware");
+const rateLimit = require("express-rate-limit");
+
+const emailLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 phút
+  max: 10, // Tối đa 3 yêu cầu trong 5 phút
+  message: { error: "Too many requests, please try again later." },
+});
 
 router.get("/", getAllUsers); // For admin purposes only
 
@@ -147,5 +162,11 @@ router.post("/login", loginUser);
  *                   example: "yourUsername"
  */
 router.get("/user", validateToken, authUser);
+
+router.post("/send-email", emailLimiter, sendEmailVerification);
+
+router.post("/verify-code", verifyCode);
+
+router.post("/check-duplicate", checkDuplicate);
 
 module.exports = router;

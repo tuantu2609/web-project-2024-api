@@ -4,11 +4,108 @@ const { Op } = require("sequelize");
 
 const { sign } = require("jsonwebtoken");
 
+const { sendEmail } = require("../services/emailService");
+
+// Bộ nhớ tạm thời cho mã xác thực
+const verificationCodes = {};
+
+const sendEmailVerification = async (req, res) => {
+  const { email, code } = req.body;
+
+  if (!email || !code) {
+    return res.status(400).json({ error: "Email and code are required." });
+  }
+
+  try {
+    const htmlContent = `
+          <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 20px; text-align: center;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 20px; box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);">
+    <h1 style="color: #4CAF50;">Welcome to Our App!</h1>
+    <p style="font-size: 16px; color: #333;">Use the verification code below to complete your registration:</p>
+    <div style="font-size: 32px; font-weight: bold; color: #4CAF50; margin: 20px 0;">
+      ${code}
+    </div>
+    <p style="font-size: 14px; color: #777;">This code will expire in 10 minutes. If you did not request this, please ignore this email.</p>
+    <a href="http://localhost:3000/" style="text-decoration: none; background-color: #4CAF50; color: white; padding: 10px 20px; border-radius: 4px; display: inline-block; margin-top: 20px;">Visit Our Website</a>
+  </div>
+  <p style="font-size: 12px; color: #777; margin-top: 20px;">&copy; 2024 Your Company. All rights reserved.</p>
+</div>
+    `;
+
+    verificationCodes[email] = code;
+
+    setTimeout(() => {
+      delete verificationCodes[email];
+    }, 10 * 60 * 1000);
+
+    await sendEmail(
+      email,
+      "Your Verification Code",
+      `Your verification code is: ${code}`, // Fallback text
+      htmlContent
+    );
+
+    res.status(200).json({ message: "Verification code sent successfully." });
+  } catch (error) {
+    console.error("Error sending verification email:", error);
+    res.status(500).json({ error: "Failed to send verification email." });
+  }
+};
+
+const verifyCode = async (req, res) => {
+  const { email, code } = req.body;
+
+  if (!email || !code) {
+    return res.status(400).json({ error: "Email and code are required." });
+  }
+
+  // Kiểm tra mã xác thực
+  if (verificationCodes[email] && String(verificationCodes[email]) === String(code)) {
+    // Nếu mã khớp, xóa mã khỏi bộ nhớ tạm
+    delete verificationCodes[email];
+    return res.status(200).json({ message: "Verification successful." });
+  } else {
+    return res.status(400).json({ error: "Invalid or expired verification code." });
+  }
+};
+
+const checkDuplicate = async (req, res) => {
+  const { username, email } = req.body;
+
+  try {
+    // Tìm kiếm người dùng có username hoặc email đã tồn tại
+    const existingUser = await Accounts.findOne({
+      where: {
+        [Op.or]: [
+          { username: username }, 
+          { email: email }
+        ],
+      },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        error: "Username or email already exists",
+      });
+    }
+
+    // Nếu không tìm thấy, trả về thông báo có thể sử dụng
+    res.json({
+      message: "Username and email are available",
+    });
+  } catch (error) {
+    console.error("Error checking duplication:", error);
+    res.status(500).json({
+      error: "Failed to check duplication",
+    });
+  }
+};
+
 const getAllUsers = async (req, res) => {
   try {
     const users = await Accounts.findAll();
     res.json(users);
-  } catch {
+  } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ message: "Internal server error." });
   }
@@ -26,10 +123,10 @@ const createUser = async (req, res) => {
     birthDate,
   } = req.body;
   try {
-    if (role !== "teacher" && role !== "student") {
+    if (role !== "instructor" && role !== "student") {
       return res
         .status(400)
-        .json({ error: "Role must be either 'teacher' or 'student'" });
+        .json({ error: "Role must be either 'instructor' or 'student'" });
     }
 
     const existingUser = await Accounts.findOne({
@@ -152,4 +249,7 @@ module.exports = {
   loginUser,
   authUser,
   getUserDetail,
+  sendEmailVerification,
+  verifyCode,
+  checkDuplicate
 };
