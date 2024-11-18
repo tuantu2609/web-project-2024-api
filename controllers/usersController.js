@@ -1,6 +1,9 @@
 const { Accounts, UserDetails } = require("../models");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
+const multer = require("multer");
+const sharp = require("sharp");
+const path = require("path");
 
 const { sign } = require("jsonwebtoken");
 
@@ -345,6 +348,79 @@ const getUserDetail = async (req, res) => {
   }
 };
 
+const updateUserDetails = async (req, res) => {
+  const { fullName, address, birthDate, phoneNumber, profilePictureURL } = req.body;
+  const userId = req.user.id;
+
+  try {
+    const userDetail = await UserDetails.findOne({ where: { accountId: userId } });
+
+    if (!userDetail) {
+      return res.status(404).json({ error: "User details not found" });
+    }
+
+    await userDetail.update({ fullName, address, birthDate, phoneNumber, profilePictureURL });
+
+    res.json({ message: "User details updated successfully" });
+  } catch (error) {
+    console.error("Error updating user details:", error);
+    res.status(500).json({ error: "Failed to update user details" });
+  }
+};
+// Cấu hình Multer để lưu ảnh trong thư mục "uploads"
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/"); // Directory for uploads
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}${path.extname(file.originalname)}`); // Name the file uniquely
+  },
+});
+
+// Bộ lọc để chỉ chấp nhận ảnh
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/gif", "image/bmp"];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Invalid file type. Only JPEG, PNG, JPG, GIF, and BMP are allowed."), false);
+  }
+};
+
+const upload = multer({ storage, fileFilter });
+
+const uploadProfilePicture = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    // Use sharp to resize and optimize the image
+    const processedImagePath = `uploads/processed_${req.file.filename}`;
+    await sharp(req.file.path)
+      .resize(256, 256, { fit: "cover" }) // Resize to 256x256 pixels
+      .toFormat("jpeg") // Convert all images to JPEG format
+      .toFile(processedImagePath);
+
+    // Save the processed image URL in the database
+    const fileUrl = `${req.protocol}://${req.get("host")}/${processedImagePath}`;
+    const userDetail = await UserDetails.findOne({ where: { accountId: userId } });
+
+    if (!userDetail) {
+      return res.status(404).json({ error: "User details not found" });
+    }
+
+    await userDetail.update({ profilePictureURL: fileUrl });
+
+    res.json({ message: "Profile picture uploaded and processed successfully", url: fileUrl });
+  } catch (error) {
+    console.error("Error uploading profile picture:", error);
+    res.status(500).json({ error: "Failed to upload and process profile picture" });
+  }
+};
+
 module.exports = {
   getAllUsers,
   createUser,
@@ -356,5 +432,7 @@ module.exports = {
   checkDuplicate,
   sendResetCode,
   verifyResetCode,
-  resetPassword
+  resetPassword,
+  updateUserDetails,
+  uploadProfilePicture,
 };

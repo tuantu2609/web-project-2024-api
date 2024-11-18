@@ -1,8 +1,10 @@
 const { default: axios, get } = require("axios");
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
 const express = require("express");
 const router = express.Router();
 const { validateToken } = require("../middlewares/AuthMiddleware");
-const { getUserDetail } = require("../controllers/usersController");
+const { getUserDetail, updateUserDetails, uploadProfilePicture  } = require("../controllers/usersController");
 
 /**
  * @swagger
@@ -83,5 +85,9 @@ const { getUserDetail } = require("../controllers/usersController");
  *                   example: "Internal server error"
  */
 router.get("/details", validateToken, getUserDetail);
+
+router.put("/update", validateToken, updateUserDetails);
+
+router.post("/upload-profile-picture", validateToken, upload.single("image"), uploadProfilePicture);
 
 module.exports = router;
