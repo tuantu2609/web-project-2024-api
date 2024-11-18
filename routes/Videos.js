@@ -4,6 +4,8 @@ const upload = require("../middlewares/UploadMiddleware");
 const {
   getAllVideos,
   uploadVideo,
+  updateVideo,
+  deleteVideo,
 } = require("../controllers/videosController");
 const { validateToken } = require("../middlewares/AuthMiddleware");
 
@@ -99,5 +101,9 @@ router.get("/", validateToken, getAllVideos); //for Admin
  *         description: Internal server error.
  */
 router.post("/", validateToken, upload.single("video"), uploadVideo);
+
+router.put("/:videoId", validateToken, upload.single("video"), updateVideo);
+
+router.delete("/:videoId", validateToken, deleteVideo);
 
 module.exports = router;
