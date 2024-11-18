@@ -25,6 +25,9 @@ const courseVideoRouter = require("./routes/CourseVideo");
 app.use("/courseVideo", courseVideoRouter);
 const adminRouter = require("./routes/Admin");
 app.use("/admin", adminRouter);
+const searchRouter = require("./routes/Search");
+app.use("/search", searchRouter);
+
 
 db.sequelize.sync().then(() => {
   app.listen(3001, () => {
