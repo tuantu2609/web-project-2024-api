@@ -8,6 +8,7 @@ const {
 } = require("../models");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
+const { Op } = require("sequelize");
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -251,6 +252,46 @@ const checkEnrollment = async (req, res) => {
     return res.status(500).json({ message: "Internal server error." });
   }
 };
+/**
+ * Search for courses by title or instructor name
+ */
+
+const searchCourses = async (req, res) => {
+  try {
+    const query = req.query.query; // Retrieve the search query from the request
+
+    if (!query) {
+      return res.status(400).json({ error: 'Search query is required.' });
+    }
+
+    // Perform a case-insensitive search on courseTitle
+    const results = await Courses.findAll({
+      where: {
+        courseTitle: {
+          [Op.iLike]: `%${query}%`, // Case-insensitive search for PostgreSQL
+        },
+      },
+      attributes: ['id', 'courseTitle'], // Return only relevant fields
+    });
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: 'Course not found.' });
+    }
+
+    res.status(200).json(results);
+  } catch (error) {
+    console.error('Error during course search:', error);
+    res.status(500).json({ error: 'Internal server error.' });
+  }
+};
+
+
+
+
+
+
+
+
 
 const updateCourse = async (req, res) => {
   const { id } = req.params; // ID of the course
@@ -399,6 +440,7 @@ module.exports = {
   getAllCoursesByID,
   enrollInCourse,
   checkEnrollment,
+  searchCourses,
   updateCourse,
   deleteCourse,
 };
