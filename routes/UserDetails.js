@@ -1,10 +1,9 @@
 const { default: axios, get } = require("axios");
-const multer = require("multer");
-const upload = multer({ dest: "uploads/" });
 const express = require("express");
 const router = express.Router();
 const { validateToken } = require("../middlewares/AuthMiddleware");
-const { getUserDetail, updateUserDetails, uploadProfilePicture  } = require("../controllers/usersController");
+const { getUserDetail, updateUserDetails } = require("../controllers/usersController");
+const upload = require("../middlewares/UploadMiddleware");
 
 /**
  * @swagger
@@ -86,8 +85,7 @@ const { getUserDetail, updateUserDetails, uploadProfilePicture  } = require("../
  */
 router.get("/details", validateToken, getUserDetail);
 
-router.put("/update", validateToken, updateUserDetails);
+router.put("/details", validateToken, upload.single("profilePicture"), updateUserDetails);
 
-router.post("/upload-profile-picture", validateToken, upload.single("image"), uploadProfilePicture);
 
 module.exports = router;
