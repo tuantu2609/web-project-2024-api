@@ -1,9 +1,9 @@
 {
   "development": {
-    "username": "tnt",
-    "password": "tnt123",
-    "database": "tnt_database",
-    "host": "98.82.80.241",
+    "username": "root",
+    "password": "Thong@2003",
+    "database": "myweb",
+    "host": "localhost",
     "dialect": "mysql"
   },
   "test": {
