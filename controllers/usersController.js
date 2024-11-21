@@ -1,9 +1,15 @@
 const { Accounts, UserDetails } = require("../models");
 const bcrypt = require("bcrypt");
 const { Op } = require("sequelize");
-const multer = require("multer");
-const sharp = require("sharp");
-const path = require("path");
+
+const cloudinary = require("cloudinary").v2;
+const streamifier = require("streamifier");
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 const { sign } = require("jsonwebtoken");
 
@@ -71,12 +77,17 @@ const verifyCode = async (req, res) => {
   }
 
   // Kiểm tra mã xác thực
-  if (verificationCodes[email] && String(verificationCodes[email]) === String(code)) {
+  if (
+    verificationCodes[email] &&
+    String(verificationCodes[email]) === String(code)
+  ) {
     // Nếu mã khớp, xóa mã khỏi bộ nhớ tạm
     delete verificationCodes[email];
     return res.status(200).json({ message: "Verification successful." });
   } else {
-    return res.status(400).json({ error: "Invalid or expired verification code." });
+    return res
+      .status(400)
+      .json({ error: "Invalid or expired verification code." });
   }
 };
 
@@ -142,7 +153,9 @@ const verifyResetCode = async (req, res) => {
     delete resetCodes[email];
     return res.status(200).json({ message: "Verification successful." });
   } else {
-    return res.status(400).json({ error: "Invalid or expired verification code." });
+    return res
+      .status(400)
+      .json({ error: "Invalid or expired verification code." });
   }
 };
 
@@ -181,10 +194,7 @@ const checkDuplicate = async (req, res) => {
     // Tìm kiếm người dùng có username hoặc email đã tồn tại
     const existingUser = await Accounts.findOne({
       where: {
-        [Op.or]: [
-          { username: username }, 
-          { email: email }
-        ],
+        [Op.or]: [{ username: username }, { email: email }],
       },
     });
 
@@ -349,75 +359,103 @@ const getUserDetail = async (req, res) => {
 };
 
 const updateUserDetails = async (req, res) => {
-  const { fullName, address, birthDate, phoneNumber, profilePictureURL } = req.body;
-  const userId = req.user.id;
-
   try {
-    const userDetail = await UserDetails.findOne({ where: { accountId: userId } });
+    const userId = req.user.id;
+    const { fullName, address, phoneNumber, birthDate } = req.body;
 
-    if (!userDetail) {
+    // Fetch the user details from the database
+    const userDetails = await UserDetails.findOne({
+      where: { accountId: userId },
+    });
+
+    if (!userDetails) {
       return res.status(404).json({ error: "User details not found" });
     }
 
-    await userDetail.update({ fullName, address, birthDate, phoneNumber, profilePictureURL });
+    // Initialize an object to hold the updated fields
+    const updatedFields = {};
 
-    res.json({ message: "User details updated successfully" });
+    // Handle image upload if a file is included in the request
+    if (req.file) {
+      // Save the old profile picture URL (if it exists)
+      const oldProfilePictureURL = userDetails.profilePictureURL;
+
+      // Use Cloudinary to upload the new file
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: "profilePicture" },
+        async (error, result) => {
+          if (error) {
+            console.error("Error uploading image to Cloudinary:", error);
+            return res
+              .status(500)
+              .json({ error: "Failed to upload profile picture" });
+          }
+
+          // If upload is successful, update the profile picture URL
+          updatedFields.profilePictureURL = result.secure_url;
+
+          // Update user details in the database
+          await userDetails.update(updatedFields);
+
+          // If there was an old profile picture, delete it from Cloudinary
+          if (oldProfilePictureURL) {
+            const oldPublicId = oldProfilePictureURL
+              .split("/")
+              .slice(-1)[0]
+              .split(".")[0]; // Extract public ID from the URL
+            cloudinary.uploader.destroy(
+              `profilePicture/${oldPublicId}`,
+              (err, result) => {
+                if (err) {
+                  console.error(
+                    "Error deleting old image from Cloudinary:",
+                    err
+                  );
+                } else {
+                  console.log("Old image deleted:", result);
+                }
+              }
+            );
+          }
+
+          res
+            .status(200)
+            .json({
+              message: "User details updated successfully",
+              userDetails,
+            });
+        }
+      );
+
+      // Stream the file buffer to Cloudinary
+      streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+    } else {
+      // If no file is provided, only update the text fields
+      if (fullName && fullName.trim() !== userDetails.fullName) {
+        updatedFields.fullName = fullName;
+      }
+      if (address && address.trim() !== userDetails.address) {
+        updatedFields.address = address;
+      }
+      if (phoneNumber && phoneNumber.trim() !== userDetails.phoneNumber) {
+        updatedFields.phoneNumber = phoneNumber;
+      }
+      if (birthDate && birthDate !== userDetails.birthDate) {
+        updatedFields.birthDate = birthDate;
+      }
+
+      // Save updates if there are fields to update
+      if (Object.keys(updatedFields).length > 0) {
+        await userDetails.update(updatedFields);
+      }
+
+      res
+        .status(200)
+        .json({ message: "User details updated successfully", userDetails });
+    }
   } catch (error) {
     console.error("Error updating user details:", error);
-    res.status(500).json({ error: "Failed to update user details" });
-  }
-};
-// Cấu hình Multer để lưu ảnh trong thư mục "uploads"
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Directory for uploads
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}${path.extname(file.originalname)}`); // Name the file uniquely
-  },
-});
-
-// Bộ lọc để chỉ chấp nhận ảnh
-const fileFilter = (req, file, cb) => {
-  const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/gif", "image/bmp"];
-  if (allowedTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error("Invalid file type. Only JPEG, PNG, JPG, GIF, and BMP are allowed."), false);
-  }
-};
-
-const upload = multer({ storage, fileFilter });
-
-const uploadProfilePicture = async (req, res) => {
-  const userId = req.user.id;
-
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    // Use sharp to resize and optimize the image
-    const processedImagePath = `uploads/processed_${req.file.filename}`;
-    await sharp(req.file.path)
-      .resize(256, 256, { fit: "cover" }) // Resize to 256x256 pixels
-      .toFormat("jpeg") // Convert all images to JPEG format
-      .toFile(processedImagePath);
-
-    // Save the processed image URL in the database
-    const fileUrl = `${req.protocol}://${req.get("host")}/${processedImagePath}`;
-    const userDetail = await UserDetails.findOne({ where: { accountId: userId } });
-
-    if (!userDetail) {
-      return res.status(404).json({ error: "User details not found" });
-    }
-
-    await userDetail.update({ profilePictureURL: fileUrl });
-
-    res.json({ message: "Profile picture uploaded and processed successfully", url: fileUrl });
-  } catch (error) {
-    console.error("Error uploading profile picture:", error);
-    res.status(500).json({ error: "Failed to upload and process profile picture" });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
@@ -434,5 +472,4 @@ module.exports = {
   verifyResetCode,
   resetPassword,
   updateUserDetails,
-  uploadProfilePicture,
 };

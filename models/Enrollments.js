@@ -32,6 +32,20 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
       },
     });
+
+    Enrollments.associate = (models) => {
+      Enrollments.belongsTo(models.Courses, {
+        foreignKey: "courseId",
+        as: "Course", // Alias để gọi trong include
+        onDelete: "CASCADE",
+      });
+  
+      Enrollments.belongsTo(models.Accounts, {
+        foreignKey: "studentId",
+        as: "Student",
+        onDelete: "CASCADE",
+      });
+    };
   
     return Enrollments;
   };

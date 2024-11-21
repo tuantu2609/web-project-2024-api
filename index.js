@@ -23,6 +23,8 @@ const videoRouter = require("./routes/Videos");
 app.use("/videos", videoRouter);
 const courseVideoRouter = require("./routes/CourseVideo");
 app.use("/courseVideo", courseVideoRouter);
+const enrollmentRouter = require("./routes/Enrollment");
+app.use("/enrollment", enrollmentRouter);
 const adminRouter = require("./routes/Admin");
 app.use("/admin", adminRouter);
 const searchRouter = require("./routes/Search");

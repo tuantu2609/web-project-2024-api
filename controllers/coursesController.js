@@ -193,106 +193,6 @@ const createCourse = async (req, res) => {
   }
 };
 
-const enrollInCourse = async (req, res) => {
-  const { courseId } = req.body;
-  const studentId = req.user.id;
-
-  try {
-    // Kiểm tra nếu đã enroll vào khóa học
-    const existingEnrollment = await Enrollments.findOne({
-      where: {
-        studentId,
-        courseId,
-      },
-    });
-
-    if (existingEnrollment) {
-      return res
-        .status(400)
-        .json({ message: "You are already enrolled in this course." });
-    }
-
-    // Thêm dữ liệu vào bảng Enrollments
-    const newEnrollment = await Enrollments.create({
-      studentId,
-      courseId,
-      // progress: 0,
-      // completed: false,
-    });
-
-    return res.status(201).json({
-      message: "Successfully enrolled in the course.",
-      enrollment: newEnrollment,
-    });
-  } catch (error) {
-    console.error("Error enrolling in course:", error);
-    return res.status(500).json({ message: "Internal server error." });
-  }
-};
-
-const checkEnrollment = async (req, res) => {
-  const { courseId } = req.params;
-  const studentId = req.user.id;
-
-  try {
-    const enrollment = await Enrollments.findOne({
-      where: {
-        studentId,
-        courseId,
-      },
-    });
-
-    if (enrollment) {
-      return res.json({ enrolled: true });
-    } else {
-      return res.json({ enrolled: false });
-    }
-  } catch (error) {
-    console.error("Error checking enrollment:", error);
-    return res.status(500).json({ message: "Internal server error." });
-  }
-};
-/**
- * Search for courses by title or instructor name
- */
-
-const searchCourses = async (req, res) => {
-  try {
-    const query = req.query.query; // Retrieve the search query from the request
-
-    if (!query) {
-      return res.status(400).json({ error: 'Search query is required.' });
-    }
-
-    // Perform a case-insensitive search on courseTitle
-    const results = await Courses.findAll({
-      where: {
-        courseTitle: {
-          [Op.iLike]: `%${query}%`, // Case-insensitive search for PostgreSQL
-        },
-      },
-      attributes: ['id', 'courseTitle'], // Return only relevant fields
-    });
-
-    if (results.length === 0) {
-      return res.status(404).json({ message: 'Course not found.' });
-    }
-
-    res.status(200).json(results);
-  } catch (error) {
-    console.error('Error during course search:', error);
-    res.status(500).json({ error: 'Internal server error.' });
-  }
-};
-
-
-
-
-
-
-
-
-
 const updateCourse = async (req, res) => {
   const { id } = req.params; // ID of the course
   const { courseTitle, courseDesc } = req.body; // Title and description from body
@@ -433,14 +333,12 @@ const deleteCourse = async (req, res) => {
   }
 };
 
+
 module.exports = {
   getAllCourses,
   getOneCourse,
   createCourse,
   getAllCoursesByID,
-  enrollInCourse,
-  checkEnrollment,
-  searchCourses,
   updateCourse,
   deleteCourse,
 };
