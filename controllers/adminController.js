@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const { sign } = require("jsonwebtoken");
 const { Admin, Accounts, UserDetails } = require("../models");
+const { sequelize } = require("../models");
 const JWT_ADMIN = process.env.JWT_ADMIN || "adminSecretToken";
 
 const loginAdmin = async (req, res) => {
@@ -143,45 +144,78 @@ const createUser = async (req, res) => {
   const { username, fullName, email, password, role = "user" } = req.body;
 
   try {
+    // Validate input
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: "Username, email, and password are required" });
+    }
+
     // Check if email or username already exists
-    const existingUser = await Accounts.findOne({
-      where: { email },
-    });
+    const existingUser = await Accounts.findOne({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: "Email is already in use" });
+    }
+
+    const existingUsername = await Accounts.findOne({ where: { username } });
+    if (existingUsername) {
+      return res.status(400).json({ error: "Username is already in use" });
     }
 
     // Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create a new account
-    const newAccount = await Accounts.create({
-      username,
-      password: hashedPassword,
-      email,
-      role,
-    });
+    // Start a transaction to ensure atomicity
+    const transaction = await sequelize.transaction();
 
-    // Create the corresponding user details
-    await UserDetails.create({
-      accountId: newAccount.id,
-      fullName,
-    });
+    try {
+      // Create a new account
+      const newAccount = await Accounts.create(
+        {
+          username,
+          password: hashedPassword,
+          email,
+          role,
+        },
+        { transaction }
+      );
 
-    res.status(201).json({
-      message: "User created successfully",
-      account: {
-        id: newAccount.id,
-        username: newAccount.username,
-        email: newAccount.email,
-        role: newAccount.role,
-      },
-    });
+      // Create the corresponding user details
+      const userDetails = await UserDetails.create(
+        {
+          accountId: newAccount.id,
+          fullName: fullName || "N/A", // Provide a default value if fullName is not provided
+        },
+        { transaction }
+      );
+
+      // Commit the transaction
+      await transaction.commit();
+
+      res.status(201).json({
+        message: "User created successfully",
+        account: {
+          id: newAccount.id,
+          username: newAccount.username,
+          email: newAccount.email,
+          role: newAccount.role,
+        },
+        userDetails: {
+          fullName: userDetails.fullName,
+        },
+      });
+    } catch (transactionError) {
+      // Rollback transaction if any error occurs during creation
+      await transaction.rollback();
+      console.error("Transaction error:", transactionError);
+      res.status(500).json({ error: "Failed to create user" });
+    }
   } catch (error) {
     console.error("Error creating user:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+
+
 
 module.exports = {
   loginAdmin,
