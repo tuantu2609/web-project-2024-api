@@ -8,7 +8,6 @@ const {
 } = require("../models");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
-const { Op } = require("sequelize");
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
