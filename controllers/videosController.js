@@ -78,9 +78,9 @@ const uploadVideo = async (req, res) => {
             videoId: newVideo.id,
           });
 
-          if (course.status === "draft") {
-            await course.update({ status: "active" });
-          }
+          // if (course.status === "draft") {
+          //   await course.update({ status: "active" });
+          // }
 
           res.status(201).json({
             message: "Upload successful",
