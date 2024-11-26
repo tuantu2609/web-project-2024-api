@@ -175,6 +175,6 @@ router.post("/enroll", validateToken, enrollInCourse);
  */
 router.get("/check-enrollment/:courseId", validateToken, checkEnrollment);
 
-router.get("/", getAllEnrollments);
+router.get("/",validateAdminToken, getAllEnrollments);
 
 module.exports = router;
