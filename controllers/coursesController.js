@@ -113,14 +113,92 @@ const getOneCourse = async (req, res) => {
   }
 };
 
+// const createCourse = async (req, res) => {
+//   const { courseTitle, courseDesc } = req.body;
+//   const instructorId = req.user.id;
+//   try {
+//     if (!courseTitle || !courseDesc) {
+//       return res
+//         .status(400)
+//         .json({ error: "Please provide course title and description" });
+//     }
+
+//     const existingCourse = await Courses.findOne({
+//       where: {
+//         courseTitle,
+//         instructorId,
+//       },
+//     });
+
+//     if (existingCourse) {
+//       return res.status(409).json({
+//         error: "Course with this title already exists for this instructor",
+//       });
+//     }
+
+//     let thumbnailURL = null;
+
+//     if (req.file) {
+//       const uploadStream = cloudinary.uploader.upload_stream(
+//         {
+//           resource_type: "image", //Type of file
+//           folder: "courseThumbnails", //Store in folder courseThumbnails
+//         },
+//         async (error, uploadResult) => {
+//           if (error) {
+//             console.error("Cloudinary Upload Error:", error);
+//             return res.status(500).json({
+//               error: "Failed to upload thumbnail to Cloudinary",
+//             });
+//           }
+
+//           try {
+//             thumbnailURL = uploadResult.secure_url; //URL thumbnail
+
+//             //Create new course
+//             const newCourse = await Courses.create({
+//               courseTitle,
+//               courseDesc,
+//               instructorId,
+//               thumbnail: thumbnailURL,
+//             });
+
+//             return res.status(201).json({
+//               message: "Course created successfully",
+//               course: newCourse,
+//             });
+//           } catch (dbError) {
+//             console.error("Database Error:", dbError);
+//             return res.status(500).json({
+//               error: "Failed to save course to database.",
+//             });
+//           }
+//         }
+//       );
+
+//       // Using streamifier to convert buffer to readable stream
+//       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
+//     } else {
+//       const newCourse = await Courses.create({
+//         courseTitle,
+//         courseDesc,
+//         instructorId,
+//       });
+//       return res
+//         .status(201)
+//         .json({ message: "Course created successfully", course: newCourse });
+//     }
+//   } catch (error) {
+//     res.status(500).json({ error: "Internal server error." });
+//   }
+// };
+
 const createCourse = async (req, res) => {
   const { courseTitle, courseDesc } = req.body;
   const instructorId = req.user.id;
   try {
     if (!courseTitle || !courseDesc) {
-      return res
-        .status(400)
-        .json({ error: "Please provide course title and description" });
+      return res.status(400).json({ error: "Please provide course title and description" });
     }
 
     const existingCourse = await Courses.findOne({
@@ -141,8 +219,8 @@ const createCourse = async (req, res) => {
     if (req.file) {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          resource_type: "image", //Type of file
-          folder: "courseThumbnails", //Store in folder courseThumbnails
+          resource_type: "image",
+          folder: "courseThumbnails",
         },
         async (error, uploadResult) => {
           if (error) {
@@ -153,18 +231,18 @@ const createCourse = async (req, res) => {
           }
 
           try {
-            thumbnailURL = uploadResult.secure_url; //URL thumbnail
+            thumbnailURL = uploadResult.secure_url;
 
-            //Create new course
             const newCourse = await Courses.create({
               courseTitle,
               courseDesc,
               instructorId,
               thumbnail: thumbnailURL,
+              status: "draft", // Default status is draft
             });
 
             return res.status(201).json({
-              message: "Course created successfully",
+              message: "Course created successfully. Awaiting approval.",
               course: newCourse,
             });
           } catch (dbError) {
@@ -176,22 +254,23 @@ const createCourse = async (req, res) => {
         }
       );
 
-      // Using streamifier to convert buffer to readable stream
       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
     } else {
       const newCourse = await Courses.create({
         courseTitle,
         courseDesc,
         instructorId,
+        status: "draft", // Default status is draft
       });
       return res
         .status(201)
-        .json({ message: "Course created successfully", course: newCourse });
+        .json({ message: "Course created successfully. Awaiting approval.", course: newCourse });
     }
   } catch (error) {
     res.status(500).json({ error: "Internal server error." });
   }
 };
+
 
 const updateCourse = async (req, res) => {
   const { id } = req.params; // ID of the course
