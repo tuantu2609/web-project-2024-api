@@ -8,6 +8,7 @@ const {
   deleteVideo,
 } = require("../controllers/videosController");
 const { validateToken } = require("../middlewares/AuthMiddleware");
+const { validateAdminToken } = require("../middlewares/AdminMiddleware");
 
 /**
  * @swagger
@@ -63,7 +64,7 @@ const { validateToken } = require("../middlewares/AuthMiddleware");
  *                   type: string
  *                   example: "Internal server error."
  */
-router.get("/", validateToken, getAllVideos); //for Admin
+router.get("/", validateAdminToken, getAllVideos); //for Admin
 
 /**
  * @swagger

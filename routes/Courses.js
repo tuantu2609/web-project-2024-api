@@ -10,6 +10,7 @@ const {
   deleteCourse,
 } = require("../controllers/coursesController");
 const { validateToken } = require("../middlewares/AuthMiddleware");
+const { validateAdminToken } = require("../middlewares/AdminMiddleware");
 const upload = require("../middlewares/UploadMiddleware");
 
 /**

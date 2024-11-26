@@ -14,6 +14,7 @@ const {
   resetPassword
 } = require("../controllers/usersController");
 const { validateToken } = require("../middlewares/AuthMiddleware");
+const { validateAdminToken } = require("../middlewares/AdminMiddleware");
 const rateLimit = require("express-rate-limit");
 
 const emailLimiter = rateLimit({
@@ -21,6 +22,7 @@ const emailLimiter = rateLimit({
   max: 10, // Tối đa 3 yêu cầu trong 5 phút
   message: { error: "Too many requests, please try again later." },
 });
+
 
 /**
  * @swagger
@@ -79,6 +81,9 @@ const emailLimiter = rateLimit({
  *                   example: "Internal server error."
  */
 router.get("/", getAllUsers); // For admin purposes only
+
+router.get("/",validateAdminToken, getAllUsers); // For admin purposes only
+
 
 /**
  * @swagger

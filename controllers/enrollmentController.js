@@ -1,4 +1,4 @@
-const { Courses, Enrollments } = require("../models");
+const { Courses, Enrollments, Accounts } = require("../models");
 
 const getEnrolledCourses = async (req, res) => {
   const studentId = req.user.id; // Lấy studentId từ thông tin user đã đăng nhập
@@ -97,4 +97,34 @@ const checkEnrollment = async (req, res) => {
   }
 };
 
-module.exports = { getEnrolledCourses, enrollInCourse, checkEnrollment };
+const getAllEnrollments = async (req, res) => {
+  try {
+    // Lấy tất cả bản ghi enrollments, bao gồm thông tin khóa học và người dùng
+    const enrollments = await Enrollments.findAll({
+      include: [
+        {
+          model: Courses,
+          as: "Course",
+          attributes: ["id", "courseTitle", "courseDesc", "thumbnail"],
+        },
+        {
+          model: Accounts,
+          as: "Student",
+          attributes: ["id", "username", "email"],
+        },
+      ],
+    });
+
+    if (enrollments.length === 0) {
+      return res.status(404).json({ message: "No enrollments found." });
+    }
+
+    // Trả về danh sách các ghi danh đã lấy
+    res.status(200).json(enrollments);
+  } catch (error) {
+    console.error("Error fetching enrollments:", error.message);
+    res.status(500).json({ message: error.message || "Internal server error." });
+  }
+};
+
+module.exports = { getEnrolledCourses, enrollInCourse, checkEnrollment, getAllEnrollments };
