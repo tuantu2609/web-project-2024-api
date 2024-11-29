@@ -64,7 +64,7 @@ const { validateAdminToken } = require("../middlewares/AdminMiddleware");
  *                   type: string
  *                   example: "Internal server error."
  */
-router.get("/", validateAdminToken, getAllVideos); //for Admin
+router.get("/", validateAdminToken, getAllVideos); //xoa di
 
 /**
  * @swagger

@@ -8,6 +8,7 @@ const {
   Videos,
   CourseVideos,
   Enrollments,
+  Notifications,
 } = require("../models");
 const { sequelize } = require("../models");
 const JWT_ADMIN = process.env.JWT_ADMIN || "adminSecretToken";
@@ -45,7 +46,17 @@ const loginAdmin = async (req, res) => {
 };
 
 const authUser = async (req, res) => {
-  res.json(req.admin);
+  res.json(req.user);
+};
+
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await Accounts.findAll();
+    res.json(users);
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
 };
 
 const getAllUsersWithDetails = async (req, res) => {
@@ -234,7 +245,7 @@ const createUser = async (req, res) => {
     console.error("Error creating user:", error);
     res.status(500).json({ error: "Internal server error" });
   }
-};
+}; // Nay bi sai
 
 // Fetch all courses
 const getAllCourses = async (req, res) => {
@@ -282,8 +293,6 @@ const getAllCourses = async (req, res) => {
   }
 };
 
-
-
 // Get a specific course by ID
 const getCourseById = async (req, res) => {
   const { id } = req.params;
@@ -295,81 +304,6 @@ const getCourseById = async (req, res) => {
     res.status(200).json(course);
   } catch (error) {
     console.error("Error fetching course details:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-// Create a new course
-const createCourse = async (req, res) => {
-  const { title, description, instructor, status } = req.body;
-  try {
-    // Validate input
-    if (!title || !description || !instructor) {
-      return res
-        .status(400)
-        .json({ error: "Title, description, and instructor are required" });
-    }
-
-    const newCourse = await Courses.create({
-      title,
-      description,
-      instructor,
-      status: status || "pending", // Default status is "pending"
-    });
-
-    res.status(201).json({
-      message: "Course created successfully",
-      course: newCourse,
-    });
-  } catch (error) {
-    console.error("Error creating course:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-// Update an existing course
-const updateCourse = async (req, res) => {
-  const { id } = req.params;
-  const { title, description, instructor, status } = req.body;
-
-  try {
-    const course = await Courses.findOne({ where: { id } });
-    if (!course) {
-      return res.status(404).json({ error: "Course not found" });
-    }
-
-    await course.update({
-      title,
-      description,
-      instructor,
-      status,
-    });
-
-    res.status(200).json({
-      message: "Course updated successfully",
-      course,
-    });
-  } catch (error) {
-    console.error("Error updating course:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-// Delete a course
-const deleteCourse = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const course = await Courses.findOne({ where: { id } });
-    if (!course) {
-      return res.status(404).json({ error: "Course not found" });
-    }
-
-    await course.destroy();
-
-    res.status(200).json({ message: "Course deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting course:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -501,31 +435,6 @@ const getCourseDetailsWithVideos = async (req, res) => {
   }
 };
 
-const deleteVideo = async (req, res) => {
-  const { id } = req.params; // Video ID
-
-  try {
-    // First, delete associations in the CourseVideos table
-    await CourseVideos.destroy({
-      where: { videoId: id },
-    });
-
-    // Then delete the video itself
-    const video = await Videos.findOne({ where: { id } });
-    if (!video) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-
-    await video.destroy();
-
-    res.status(200).json({ message: "Video deleted successfully" });
-  } catch (error) {
-    console.error("Error deleting video:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-// Get pending courses
 const getPendingCourses = async (req, res) => {
   try {
     const pendingCourses = await Courses.findAll({
@@ -555,42 +464,60 @@ const getPendingCourses = async (req, res) => {
   }
 };
 
-// Get pending videos
-const getPendingVideos = async (req, res) => {
-  try {
-    const pendingVideos = await Videos.findAll({
-      where: { status: "draft" },
-      include: [
-        {
-          model: Courses,
-          attributes: ["id", "courseTitle"],
-        },
-      ],
-    });
-
-    res.status(200).json({
-      message: "Pending videos fetched successfully",
-      videos: pendingVideos,
-    });
-  } catch (error) {
-    console.error("Error fetching pending videos:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
 // Approve a course
+// const approveCourse = async (req, res) => {
+//   const { id } = req.params;
+
+//   try {
+//     const course = await Courses.findOne({ where: { id } });
+
+//     if (!course) {
+//       return res.status(404).json({ error: "Course not found" });
+//     }
+
+//     await course.update({ status: "active" });
+
+//     res.status(200).json({
+//       message: "Course approved successfully",
+//       course,
+//     });
+//   } catch (error) {
+//     console.error("Error approving course:", error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
 const approveCourse = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const course = await Courses.findOne({ where: { id } });
+    // Tìm khóa học cần phê duyệt
+    const course = await Courses.findOne({
+      where: { id },
+      include: [
+        {
+          model: Accounts,
+          as: "Instructor", // Liên kết với bảng Accounts
+          attributes: ["id", "username"], // Lấy thông tin cơ bản của giảng viên
+        },
+      ],
+    });
 
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
 
+    // Cập nhật trạng thái khóa học thành "active"
     await course.update({ status: "active" });
 
+    // Gửi thông báo cho giảng viên
+    const notificationMessage = `Your course "${course.courseTitle}" has been approved by the admin.`;
+    await Notifications.create({
+      userId: course.Instructor.id, // ID của giảng viên
+      message: notificationMessage, // Nội dung thông báo
+      type: "courseApproval", // Loại thông báo
+    });
+
+    // Phản hồi thành công
     res.status(200).json({
       message: "Course approved successfully",
       course,
@@ -601,43 +528,58 @@ const approveCourse = async (req, res) => {
   }
 };
 
-// Approve a video
-const approveVideo = async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const video = await Videos.findOne({ where: { id } });
-
-    if (!video) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-
-    await video.update({ status: "active" });
-
-    res.status(200).json({
-      message: "Video approved successfully",
-      video,
-    });
-  } catch (error) {
-    console.error("Error approving video:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
 // Reject a course by updating its status to "rejected"
+// const rejectCourse = async (req, res) => {
+//   const { id } = req.params;
+
+//   try {
+//     const course = await Courses.findOne({ where: { id } });
+
+//     if (!course) {
+//       return res.status(404).json({ error: "Course not found" });
+//     }
+
+//     // Update the course's status to "rejected"
+//     await course.update({ status: "rejected" });
+
+//     res.status(200).json({ message: "Course rejected successfully", course });
+//   } catch (error) {
+//     console.error("Error rejecting course:", error);
+//     res.status(500).json({ error: "Internal server error" });
+//   }
+// };
 const rejectCourse = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const course = await Courses.findOne({ where: { id } });
+    // Tìm khóa học cần từ chối
+    const course = await Courses.findOne({
+      where: { id },
+      include: [
+        {
+          model: Accounts,
+          as: "Instructor", // Liên kết với bảng Accounts
+          attributes: ["id", "username"], // Lấy thông tin cơ bản của giảng viên
+        },
+      ],
+    });
 
     if (!course) {
       return res.status(404).json({ error: "Course not found" });
     }
 
-    // Update the course's status to "rejected"
+    // Cập nhật trạng thái khóa học thành "rejected"
     await course.update({ status: "rejected" });
 
+    // Gửi thông báo cho giảng viên
+    const notificationMessage = `Your course "${course.courseTitle}" has been rejected by the admin. Please review and update your course for approval.`;
+    await Notifications.create({
+      userId: course.Instructor.id, // ID của giảng viên
+      message: notificationMessage, // Nội dung thông báo
+      type: "courseRejection", // Loại thông báo
+    });
+
+    // Phản hồi thành công
     res.status(200).json({ message: "Course rejected successfully", course });
   } catch (error) {
     console.error("Error rejecting course:", error);
@@ -645,32 +587,24 @@ const rejectCourse = async (req, res) => {
   }
 };
 
-// Reject a video
-const rejectVideo = async (req, res) => {
-  const { id } = req.params;
 
+/**
+ * Get all videos
+ */
+const getAllVideos = async (req, res) => {
   try {
-    const video = await Videos.findOne({ where: { id } });
-
-    if (!video) {
-      return res.status(404).json({ error: "Video not found" });
-    }
-
-    await video.update({ status: "rejected" });
-
-    res.status(200).json({
-      message: "Video rejected successfully",
-      video,
-    });
+    const videos = await Videos.findAll();
+    res.json(videos);
   } catch (error) {
-    console.error("Error rejecting video:", error);
-    res.status(500).json({ error: "Internal server error" });
+    console.error("Error fetching videos:", error);
+    res.status(500).json({ message: "Internal server error." });
   }
 };
 
 module.exports = {
   loginAdmin,
   authUser,
+  getAllUsers,
   getAllUsersWithDetails,
   adminUpdateUserDetails,
   getUserDetailsById,
@@ -678,16 +612,10 @@ module.exports = {
   createUser,
   getAllCourses,
   getCourseById,
-  createCourse,
-  updateCourse,
-  deleteCourse,
   updateCourseStatus,
   getCourseDetailsWithVideos,
-  deleteVideo,
   getPendingCourses,
-  getPendingVideos,
   approveCourse,
-  approveVideo,
   rejectCourse,
-  rejectVideo,
+  getAllVideos,
 };

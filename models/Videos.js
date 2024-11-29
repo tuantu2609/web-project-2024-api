@@ -22,6 +22,13 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: "draft",
       },
     });
+
+    Videos.associate = (models) => {
+      Videos.hasMany(models.CourseVideos, {
+        foreignKey: "videoId",
+        as: "CourseVideos", // Alias phải khớp với alias trong API
+      });
+    };
   
     return Videos;
   };

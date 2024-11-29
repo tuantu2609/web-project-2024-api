@@ -1,4 +1,4 @@
-const { Courses, Enrollments, Accounts } = require("../models");
+const { Courses, Enrollments, Accounts, Notifications, UserDetails } = require("../models");
 
 const getEnrolledCourses = async (req, res) => {
   const studentId = req.user.id; // Lấy studentId từ thông tin user đã đăng nhập
@@ -64,6 +64,50 @@ const enrollInCourse = async (req, res) => {
       courseId,
     });
 
+    // Lấy thông tin về khóa học và giảng viên
+    const course = await Courses.findByPk(courseId, {
+      include: [
+        {
+          model: Accounts,
+          as: "Instructor",
+          attributes: ["id"], // Chỉ cần lấy ID của giảng viên
+        },
+      ],
+    });
+
+    if (!course) {
+      return res
+        .status(404)
+        .json({ message: "Course not found or invalid course ID." });
+    }
+
+    const instructorId = course.Instructor?.id;
+    if (!instructorId) {
+      return res
+        .status(400)
+        .json({ message: "Course does not have a valid instructor." });
+    }
+
+    // Lấy fullName của sinh viên để hiển thị trong thông báo
+    const student = await Accounts.findByPk(studentId, {
+      include: [
+        {
+          model: UserDetails,
+          attributes: ["fullName"],
+        },
+      ],
+    });
+
+    const studentName = student?.UserDetail?.fullName || "A student";
+
+    // Tạo thông báo cho giảng viên
+    await Notifications.create({
+      userId: instructorId, // ID của giảng viên
+      message: `${studentName} has enrolled in your course "${course.courseTitle}".`,
+      type: "studentEnrollment",
+      status: "unread",
+    });
+
     return res.status(201).json({
       message: "Successfully enrolled in the course.",
       enrollment: newEnrollment,
@@ -123,8 +167,15 @@ const getAllEnrollments = async (req, res) => {
     res.status(200).json(enrollments);
   } catch (error) {
     console.error("Error fetching enrollments:", error.message);
-    res.status(500).json({ message: error.message || "Internal server error." });
+    res
+      .status(500)
+      .json({ message: error.message || "Internal server error." });
   }
 };
 
-module.exports = { getEnrolledCourses, enrollInCourse, checkEnrollment, getAllEnrollments };
+module.exports = {
+  getEnrolledCourses,
+  enrollInCourse,
+  checkEnrollment,
+  getAllEnrollments,
+};

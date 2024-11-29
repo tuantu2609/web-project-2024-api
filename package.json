@@ -25,6 +25,7 @@
     "sequelize": "^6.37.4",
     "sequelize-cli": "^6.6.2",
     "sharp": "^0.33.5",
+    "socket.io": "^4.8.1",
     "streamifier": "^0.1.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"

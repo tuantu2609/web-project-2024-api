@@ -5,6 +5,7 @@ const {
   Accounts,
   UserDetails,
   Videos,
+  Notifications,
 } = require("../models");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
@@ -112,85 +113,6 @@ const getOneCourse = async (req, res) => {
   }
 };
 
-// const createCourse = async (req, res) => {
-//   const { courseTitle, courseDesc } = req.body;
-//   const instructorId = req.user.id;
-//   try {
-//     if (!courseTitle || !courseDesc) {
-//       return res
-//         .status(400)
-//         .json({ error: "Please provide course title and description" });
-//     }
-
-//     const existingCourse = await Courses.findOne({
-//       where: {
-//         courseTitle,
-//         instructorId,
-//       },
-//     });
-
-//     if (existingCourse) {
-//       return res.status(409).json({
-//         error: "Course with this title already exists for this instructor",
-//       });
-//     }
-
-//     let thumbnailURL = null;
-
-//     if (req.file) {
-//       const uploadStream = cloudinary.uploader.upload_stream(
-//         {
-//           resource_type: "image", //Type of file
-//           folder: "courseThumbnails", //Store in folder courseThumbnails
-//         },
-//         async (error, uploadResult) => {
-//           if (error) {
-//             console.error("Cloudinary Upload Error:", error);
-//             return res.status(500).json({
-//               error: "Failed to upload thumbnail to Cloudinary",
-//             });
-//           }
-
-//           try {
-//             thumbnailURL = uploadResult.secure_url; //URL thumbnail
-
-//             //Create new course
-//             const newCourse = await Courses.create({
-//               courseTitle,
-//               courseDesc,
-//               instructorId,
-//               thumbnail: thumbnailURL,
-//             });
-
-//             return res.status(201).json({
-//               message: "Course created successfully",
-//               course: newCourse,
-//             });
-//           } catch (dbError) {
-//             console.error("Database Error:", dbError);
-//             return res.status(500).json({
-//               error: "Failed to save course to database.",
-//             });
-//           }
-//         }
-//       );
-
-//       // Using streamifier to convert buffer to readable stream
-//       streamifier.createReadStream(req.file.buffer).pipe(uploadStream);
-//     } else {
-//       const newCourse = await Courses.create({
-//         courseTitle,
-//         courseDesc,
-//         instructorId,
-//       });
-//       return res
-//         .status(201)
-//         .json({ message: "Course created successfully", course: newCourse });
-//     }
-//   } catch (error) {
-//     res.status(500).json({ error: "Internal server error." });
-//   }
-// };
 
 const createCourse = async (req, res) => {
   const { courseTitle, courseDesc } = req.body;
@@ -270,7 +192,6 @@ const createCourse = async (req, res) => {
   }
 };
 
-
 const updateCourse = async (req, res) => {
   const { id } = req.params; // ID of the course
   const { courseTitle, courseDesc } = req.body; // Title and description from body
@@ -341,6 +262,76 @@ const updateCourse = async (req, res) => {
   }
 };
 
+// const deleteCourse = async (req, res) => {
+//   const { id } = req.params; // ID của khóa học
+//   const { id: userId, role } = req.user; // Lấy user ID và role từ validateToken
+
+//   try {
+//     const course = await Courses.findByPk(id);
+
+//     if (!course) {
+//       return res.status(404).json({ message: "Course not found." });
+//     }
+
+//     // Kiểm tra nếu người dùng là chủ sở hữu hoặc là admin
+//     if (course.instructorId !== userId && role !== "admin") {
+//       return res
+//         .status(403)
+//         .json({ message: "You are not authorized to delete this course." });
+//     }
+
+//     // Nếu khóa học có thumbnail, xóa ảnh trên Cloudinary
+//     if (course.thumbnail) {
+//       const publicId = course.thumbnail.split('/').pop().split('.')[0];
+//       try {
+//         await cloudinary.uploader.destroy(`courseThumbnails/${publicId}`);
+//         console.log(`Deleted image: courseThumbnails/${publicId}`);
+//       } catch (cloudinaryError) {
+//         console.error("Error deleting image from Cloudinary:", cloudinaryError);
+//         return res.status(500).json({
+//           message: "Failed to delete image from Cloudinary.",
+//         });
+//       }
+//     }
+
+//     // Lấy danh sách video liên kết với khóa học
+//     const courseVideos = await CourseVideos.findAll({ where: { courseId: id } });
+
+//     for (const courseVideo of courseVideos) {
+//       const video = await Videos.findByPk(courseVideo.videoId);
+
+//       if (video && video.videoURL) {
+//         const publicId = video.videoURL.split('/').pop().split('.')[0];
+
+//         // Xóa video trên Cloudinary
+//         try {
+//           await cloudinary.uploader.destroy(`videosSrc/${publicId}`, { resource_type: "video" });
+//           console.log(`Deleted video: videosSrc/${publicId}`);
+//         } catch (cloudinaryError) {
+//           console.error("Error deleting video from Cloudinary:", cloudinaryError);
+//           return res.status(500).json({
+//             message: "Failed to delete video from Cloudinary.",
+//           });
+//         }
+//       }
+
+//       // Xóa bản ghi trong CourseVideos trước
+//       await CourseVideos.destroy({ where: { videoId: courseVideo.videoId } });
+
+//       // Xóa bản ghi video trong cơ sở dữ liệu
+//       await video.destroy();
+//     }
+
+//     // Sau khi xóa video, xóa khóa học khỏi cơ sở dữ liệu
+//     await course.destroy();
+
+//     res.json({ message: "Course, associated videos, and image deleted successfully." });
+//   } catch (error) {
+//     console.error("Error deleting course:", error);
+//     res.status(500).json({ message: "Internal server error." });
+//   }
+// };
+
 const deleteCourse = async (req, res) => {
   const { id } = req.params; // ID của khóa học
   const { id: userId, role } = req.user; // Lấy user ID và role từ validateToken
@@ -384,7 +375,9 @@ const deleteCourse = async (req, res) => {
 
         // Xóa video trên Cloudinary
         try {
-          await cloudinary.uploader.destroy(`videosSrc/${publicId}`, { resource_type: "video" });
+          await cloudinary.uploader.destroy(`videosSrc/${publicId}`, {
+            resource_type: "video",
+          });
           console.log(`Deleted video: videosSrc/${publicId}`);
         } catch (cloudinaryError) {
           console.error("Error deleting video from Cloudinary:", cloudinaryError);
@@ -403,6 +396,14 @@ const deleteCourse = async (req, res) => {
 
     // Sau khi xóa video, xóa khóa học khỏi cơ sở dữ liệu
     await course.destroy();
+
+    // Thêm thông báo cho instructor
+    const instructorId = course.instructorId;
+    await Notifications.create({
+      userId: instructorId, // ID của instructor
+      message: `Your course "${course.courseTitle}" has been deleted by the admin.`,
+      type: "courseDeletion",
+    });
 
     res.json({ message: "Course, associated videos, and image deleted successfully." });
   } catch (error) {
