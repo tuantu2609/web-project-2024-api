@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   loginAdmin,
   authUser,
+  getAllUsers,
   getAllUsersWithDetails,
   adminUpdateUserDetails,
   getUserDetailsById,
@@ -10,21 +11,16 @@ const {
   createUser,
   getAllCourses,
   getCourseById,
-  createCourse,
-  updateCourse,
-  deleteCourse,
   updateCourseStatus,
   getCourseDetailsWithVideos,
-  deleteVideo,
   getPendingCourses,
-  getPendingVideos,
   approveCourse,
-  approveVideo,
   rejectCourse,
-  rejectVideo,
+  getAllVideos,
 } = require("../controllers/adminController");
+const { deleteCourse } = require("../controllers/coursesController");
+const { deleteVideo } = require("../controllers/videosController");
 const { validateAdminToken } = require("../middlewares/AdminMiddleware");
-
 
 // Admin authentication
 router.post("/login", loginAdmin);
@@ -178,6 +174,8 @@ router.post("/login", loginAdmin);
 
 router.get("/auth", validateAdminToken, authUser);
 
+router.get("/users", validateAdminToken, getAllUsers);
+
 // User management
 router.get("/users/details", validateAdminToken, getAllUsersWithDetails);
 router.put("/update-user/:id", validateAdminToken, adminUpdateUserDetails);
@@ -188,23 +186,24 @@ router.post("/create-user", validateAdminToken, createUser);
 // Course management
 router.get("/courses", validateAdminToken, getAllCourses);
 router.get("/courses/:id", validateAdminToken, getCourseById);
-router.post("/courses", validateAdminToken, createCourse);
-router.put("/courses/:id", validateAdminToken, updateCourse);
 router.delete("/courses/:id", validateAdminToken, deleteCourse);
 router.patch("/courses/:id/status", validateAdminToken, updateCourseStatus);
-router.get("/courses/:id/details", validateAdminToken, getCourseDetailsWithVideos);
+router.get(
+  "/courses/:id/details",
+  validateAdminToken,
+  getCourseDetailsWithVideos
+);
 
 // Video management
-router.delete("/videos/:id", validateAdminToken, deleteVideo);
+router.get("/videos", validateAdminToken, getAllVideos);
+router.delete("/videos/:videoId", validateAdminToken, deleteVideo);
 
 // Approvals and Rejections
 // Approvals
 router.get("/pending-courses", validateAdminToken, getPendingCourses);
-router.get("/pending-videos", validateAdminToken, getPendingVideos);
 router.patch("/courses/:id/approve", validateAdminToken, approveCourse);
-router.patch("/videos/:id/approve", validateAdminToken, approveVideo);
+
 //Rejections
 router.patch("/courses/:id/reject", validateAdminToken, rejectCourse);
-router.patch("/videos/:id/reject", validateAdminToken, rejectVideo);
 
 module.exports = router;

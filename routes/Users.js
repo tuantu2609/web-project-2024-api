@@ -2,7 +2,7 @@ const { default: axios, get } = require("axios");
 const express = require("express");
 const router = express.Router();
 const {
-  getAllUsers,
+  // getAllUsers,
   createUser,
   loginUser,
   authUser,
@@ -80,9 +80,9 @@ const emailLimiter = rateLimit({
  *                   type: string
  *                   example: "Internal server error."
  */
-router.get("/", getAllUsers); // For admin purposes only
+// router.get("/", getAllUsers); // For admin purposes only
 
-router.get("/",validateAdminToken, getAllUsers); // For admin purposes only
+// router.get("/",validateAdminToken, getAllUsers); // For admin purposes only
 
 
 /**

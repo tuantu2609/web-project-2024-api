@@ -10,7 +10,7 @@ const validateAdminToken = (req, res, next) => {
 
   try {
     const validToken = verify(token, JWT_ADMIN);
-    req.admin = validToken;
+    req.user = validToken;
     if (validToken) {
       return next();
     }
