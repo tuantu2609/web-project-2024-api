@@ -591,15 +591,56 @@ const rejectCourse = async (req, res) => {
 /**
  * Get all videos
  */
+// const getAllVideos = async (req, res) => {
+//   try {
+//     const videos = await Videos.findAll();
+//     res.json(videos);
+//   } catch (error) {
+//     console.error("Error fetching videos:", error);
+//     res.status(500).json({ message: "Internal server error." });
+//   }
+// };
+/**
+ * Get all videos
+ */
 const getAllVideos = async (req, res) => {
   try {
-    const videos = await Videos.findAll();
-    res.json(videos);
+    // Fetch videos and include associated course titles
+    const videos = await Videos.findAll({
+      include: [
+        {
+          model: CourseVideos, // Assuming this is the linking model
+          as: "CourseVideos", // Alias (if defined in your association)
+          include: [
+            {
+              model: Courses, // Assuming this is the Courses model
+              as: "Course", // Alias (if defined in your association)
+              attributes: ["id", "courseTitle"], // Only include courseTitle and id
+            },
+          ],
+        },
+      ],
+    });
+
+    // Format the response to include courseTitle
+    const formattedVideos = videos.map((video) => {
+      const course = video.CourseVideos?.[0]?.Course; // Get the first course (if exists)
+      return {
+        id: video.id,
+        videoTitle: video.videoTitle,
+        videoDesc: video.videoDesc,
+        videoDuration: video.videoDuration,
+        courseTitle: course ? course.courseTitle : "No course", // Fallback if no course is linked
+      };
+    });
+
+    res.json(formattedVideos);
   } catch (error) {
     console.error("Error fetching videos:", error);
     res.status(500).json({ message: "Internal server error." });
   }
 };
+
 
 module.exports = {
   loginAdmin,

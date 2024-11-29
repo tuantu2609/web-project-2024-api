@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const upload = require("../middlewares/UploadMiddleware");
 const {
-  getAllVideos,
+  // getAllVideos,
   uploadVideo,
   updateVideo,
   deleteVideo,
@@ -10,61 +10,61 @@ const {
 const { validateToken } = require("../middlewares/AuthMiddleware");
 const { validateAdminToken } = require("../middlewares/AdminMiddleware");
 
-/**
- * @swagger
- * /videos:
- *   get:
- *     summary: Get all videos
- *     tags:
- *       - Videos
- *     description: Retrieve all videos in the system. This endpoint is for Admin purposes only. A valid access token is required.
- *     operationId: getAllVideos
- *     security:
- *       - accessTokenAuth: []
- *     responses:
- *       '200':
- *         description: Successfully retrieved the list of videos
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                     description: The unique ID of the video.
- *                     example: 1
- *                   videoTitle:
- *                     type: string
- *                     description: The title of the video.
- *                     example: "Introduction to Machine Learning"
- *                   videoURL:
- *                     type: string
- *                     description: The URL of the video.
- *                     example: "https://example.com/videos/video1.mp4"
- *                   createdAt:
- *                     type: string
- *                     format: date-time
- *                     description: The timestamp when the video was uploaded.
- *                     example: "2024-01-01T12:00:00Z"
- *                   updatedAt:
- *                     type: string
- *                     format: date-time
- *                     description: The timestamp when the video was last updated.
- *                     example: "2024-01-02T12:00:00Z"
- *       '500':
- *         description: Internal server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Internal server error."
- */
-router.get("/", validateAdminToken, getAllVideos); //xoa di
+// /**
+//  * @swagger
+//  * /videos:
+//  *   get:
+//  *     summary: Get all videos
+//  *     tags:
+//  *       - Videos
+//  *     description: Retrieve all videos in the system. This endpoint is for Admin purposes only. A valid access token is required.
+//  *     operationId: getAllVideos
+//  *     security:
+//  *       - accessTokenAuth: []
+//  *     responses:
+//  *       '200':
+//  *         description: Successfully retrieved the list of videos
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: array
+//  *               items:
+//  *                 type: object
+//  *                 properties:
+//  *                   id:
+//  *                     type: integer
+//  *                     description: The unique ID of the video.
+//  *                     example: 1
+//  *                   videoTitle:
+//  *                     type: string
+//  *                     description: The title of the video.
+//  *                     example: "Introduction to Machine Learning"
+//  *                   videoURL:
+//  *                     type: string
+//  *                     description: The URL of the video.
+//  *                     example: "https://example.com/videos/video1.mp4"
+//  *                   createdAt:
+//  *                     type: string
+//  *                     format: date-time
+//  *                     description: The timestamp when the video was uploaded.
+//  *                     example: "2024-01-01T12:00:00Z"
+//  *                   updatedAt:
+//  *                     type: string
+//  *                     format: date-time
+//  *                     description: The timestamp when the video was last updated.
+//  *                     example: "2024-01-02T12:00:00Z"
+//  *       '500':
+//  *         description: Internal server error
+//  *         content:
+//  *           application/json:
+//  *             schema:
+//  *               type: object
+//  *               properties:
+//  *                 message:
+//  *                   type: string
+//  *                   example: "Internal server error."
+//  */
+// router.get("/", validateAdminToken, getAllVideos); //xoa di
 
 /**
  * @swagger

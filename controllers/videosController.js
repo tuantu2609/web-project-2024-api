@@ -8,18 +8,18 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-/**
- * Get all videos
- */
-const getAllVideos = async (req, res) => {
-  try {
-    const videos = await Videos.findAll();
-    res.json(videos);
-  } catch (error) {
-    console.error("Error fetching videos:", error);
-    res.status(500).json({ message: "Internal server error." });
-  }
-};
+// /**
+//  * Get all videos
+//  */
+// const getAllVideos = async (req, res) => {
+//   try {
+//     const videos = await Videos.findAll();
+//     res.json(videos);
+//   } catch (error) {
+//     console.error("Error fetching videos:", error);
+//     res.status(500).json({ message: "Internal server error." });
+//   }
+// };
 
 /**
  * Upload new video
@@ -372,7 +372,7 @@ const deleteVideo = async (req, res) => {
     // Add notification for instructor
     await Notifications.create({
       userId: course.instructorId,
-      message: `The video "${video.videoTitle}" in your course "${course.courseTitle}" has been deleted.`,
+      message: `The video "${video.videoTitle}" in your course "${course.courseTitle}" has been deleted by admin.`,
       type: "videoDeletion",
     });
 
@@ -385,7 +385,7 @@ const deleteVideo = async (req, res) => {
 };
 
 module.exports = {
-  getAllVideos,
+  // getAllVideos,
   uploadVideo,
   updateVideo,
   deleteVideo,
