@@ -1,31 +1,29 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
-const cloudinary = require("cloudinary").v2;
-const dotenv = require("dotenv");
-const { Videos } = require("../models");
-
-dotenv.config();
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const upload = require("../middlewares/UploadMiddleware");
+const {
+  getAllVideos,
+  uploadVideo,
+  updateVideo,
+  deleteVideo,
+} = require("../controllers/videosController");
+const { validateToken } = require("../middlewares/AuthMiddleware");
+const { validateAdminToken } = require("../middlewares/AdminMiddleware");
 
 /**
  * @swagger
  * /videos:
  *   get:
- *     summary: Returns the list of all the videos
+ *     summary: Get all videos
  *     tags:
  *       - Videos
+ *     description: Retrieve all videos in the system. This endpoint is for Admin purposes only. A valid access token is required.
+ *     operationId: getAllVideos
+ *     security:
+ *       - accessTokenAuth: []
  *     responses:
- *       200:
- *         description: The list of all the videos
+ *       '200':
+ *         description: Successfully retrieved the list of videos
  *         content:
  *           application/json:
  *             schema:
@@ -35,70 +33,283 @@ const upload = multer({ storage });
  *                 properties:
  *                   id:
  *                     type: integer
- *                     description: The unique identifier for the video
- *                   title:
+ *                     description: The unique ID of the video.
+ *                     example: 1
+ *                   videoTitle:
  *                     type: string
- *                     description: The title of the video
- *                   description:
+ *                     description: The title of the video.
+ *                     example: "Introduction to Machine Learning"
+ *                   videoURL:
  *                     type: string
- *                     description: A brief description of the video
- *                   url:
+ *                     description: The URL of the video.
+ *                     example: "https://example.com/videos/video1.mp4"
+ *                   createdAt:
  *                     type: string
- *                     format: uri
- *                     description: The URL of the video
- *       500:
+ *                     format: date-time
+ *                     description: The timestamp when the video was uploaded.
+ *                     example: "2024-01-01T12:00:00Z"
+ *                   updatedAt:
+ *                     type: string
+ *                     format: date-time
+ *                     description: The timestamp when the video was last updated.
+ *                     example: "2024-01-02T12:00:00Z"
+ *       '500':
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
  */
-router.get("/", async (req, res) => {
-  const videos = await Videos.findAll();
-  res.json(videos);
-});
+router.get("/", validateAdminToken, getAllVideos); //xoa di
 
-router.post("/", upload.single("video"), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: "No file uploaded." });
-    }
+/**
+ * @swagger
+ * /videos:
+ *   post:
+ *     summary: Upload a new video
+ *     tags:
+ *       - Videos
+ *     description: Upload a new video to a specific course. A valid access token is required.
+ *     operationId: uploadVideo
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoTitle:
+ *                 type: string
+ *                 description: The title of the video.
+ *                 example: "Introduction to Machine Learning"
+ *               videoDesc:
+ *                 type: string
+ *                 description: A short description of the video.
+ *                 example: "Learn the basics of machine learning in this video."
+ *               courseID:
+ *                 type: integer
+ *                 description: The ID of the course the video belongs to.
+ *                 example: 1
+ *               video:
+ *                 type: string
+ *                 format: binary
+ *                 description: The video file to upload.
+ *     security:
+ *       - accessTokenAuth: []
+ *     responses:
+ *       '201':
+ *         description: Video uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Upload successful"
+ *                 data:
+ *                   type: object
+ *                   description: The newly uploaded video details.
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: The ID of the video.
+ *                       example: 1
+ *                     videoTitle:
+ *                       type: string
+ *                       description: The title of the video.
+ *                       example: "Introduction to Machine Learning"
+ *                     videoDesc:
+ *                       type: string
+ *                       description: The description of the video.
+ *                       example: "Learn the basics of machine learning in this video."
+ *                     videoURL:
+ *                       type: string
+ *                       description: The URL of the uploaded video.
+ *                       example: "https://example.com/videos/video1.mp4"
+ *                     videoDuration:
+ *                       type: number
+ *                       description: The duration of the video in seconds.
+ *                       example: 120
+ *       '400':
+ *         description: Bad request due to missing required fields or no file uploaded
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Video title and description are required."
+ *       '404':
+ *         description: Course not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Course not found."
+ *       '500':
+ *         description: Internal server error during upload or saving data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Server error during upload."
+ */
+router.post("/", validateToken, upload.single("video"), uploadVideo);
 
-    const { videoTitle, videoDesc } = req.body;
+/**
+ * @swagger
+ * /videos/{videoId}:
+ *   put:
+ *     summary: Update a video
+ *     tags:
+ *       - Videos
+ *     description: Update the details of an existing video, including replacing the video file. A valid access token is required.
+ *     operationId: updateVideo
+ *     parameters:
+ *       - name: videoId
+ *         in: path
+ *         required: true
+ *         description: The ID of the video to update.
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               videoTitle:
+ *                 type: string
+ *                 description: The updated title of the video.
+ *                 example: "Advanced Machine Learning Concepts"
+ *               videoDesc:
+ *                 type: string
+ *                 description: The updated description of the video.
+ *                 example: "This video explains advanced concepts in machine learning."
+ *               video:
+ *                 type: string
+ *                 format: binary
+ *                 description: Optional new video file to replace the current one.
+ *     security:
+ *       - accessTokenAuth: []
+ *     responses:
+ *       '200':
+ *         description: Video updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Video updated successfully."
+ *                 video:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: The ID of the video.
+ *                       example: 1
+ *                     videoTitle:
+ *                       type: string
+ *                       description: The title of the video.
+ *                       example: "Advanced Machine Learning Concepts"
+ *                     videoDesc:
+ *                       type: string
+ *                       description: The description of the video.
+ *                       example: "This video explains advanced concepts in machine learning."
+ *                     videoURL:
+ *                       type: string
+ *                       description: The URL of the updated video.
+ *                       example: "https://example.com/videos/new-video.mp4"
+ *       '404':
+ *         description: Video not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Video not found."
+ *       '500':
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+router.put("/:videoId", validateToken, upload.single("video"), updateVideo);
 
-    const uploadResult = await cloudinary.uploader.upload_stream(
-      {
-        resource_type: "video",
-        folder: "videosSrc",
-      },
-      async (error, uploadResult) => {
-        if (error) {
-          console.error("Cloudinary Upload Error:", error);
-          return res
-            .status(500)
-            .json({ message: "Upload to Cloudinary failed.", error });
-        }
-
-        const videoURL = uploadResult.secure_url;
-        const videoDuration = uploadResult.duration;
-
-        const newVideo = await Videos.create({
-          videoTitle,
-          videoDesc,
-          videoURL,
-          videoDuration,
-        });
-
-        res.status(201).json({
-          message: "Upload successful",
-          data: newVideo,
-        });
-      }
-    );
-
-    uploadResult.end(req.file.buffer);
-  } catch (error) {
-    console.error("Upload Error:", error);
-    res
-      .status(500)
-      .json({ message: "Server error during upload.", error: error.message });
-  }
-});
+/**
+ * @swagger
+ * /videos/{videoId}:
+ *   delete:
+ *     summary: Delete a video
+ *     tags:
+ *       - Videos
+ *     description: Delete a video from the system, including its record in the database and the associated file on Cloudinary. A valid access token is required.
+ *     operationId: deleteVideo
+ *     parameters:
+ *       - name: videoId
+ *         in: path
+ *         required: true
+ *         description: The ID of the video to delete.
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *     security:
+ *       - accessTokenAuth: []
+ *     responses:
+ *       '200':
+ *         description: Video deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Video deleted successfully."
+ *       '404':
+ *         description: Video not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Video not found."
+ *       '500':
+ *         description: Internal server error during video deletion
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Internal server error."
+ */
+router.delete("/:videoId", validateToken, deleteVideo);
 
 module.exports = router;
