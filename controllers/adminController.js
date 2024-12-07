@@ -629,6 +629,7 @@ const getAllVideos = async (req, res) => {
         id: video.id,
         videoTitle: video.videoTitle,
         videoDesc: video.videoDesc,
+        videoURL: video.videoURL,
         videoDuration: video.videoDuration,
         courseTitle: course ? course.courseTitle : "No course", // Fallback if no course is linked
       };
