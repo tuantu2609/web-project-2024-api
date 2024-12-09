@@ -1,6 +1,7 @@
 const { Videos, CourseVideos, Courses, Notifications } = require("../models");
 const cloudinary = require("cloudinary").v2;
 const streamifier = require("streamifier");
+const { Op } = require("sequelize");
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -129,6 +130,22 @@ const uploadVideo = async (req, res) => {
       return res.status(404).json({ message: "Course not found." });
     }
 
+    // Kiểm tra tiêu đề video trùng lặp trong khóa học
+    const existingVideo = await Videos.findOne({
+      include: {
+        model: CourseVideos,
+        as: "CourseVideos", // Sử dụng alias đúng
+        where: { courseId: courseID },
+      },
+      where: { videoTitle },
+    });
+
+    if (existingVideo) {
+      return res.status(400).json({
+        message: "A video with the same title already exists in this course.",
+      });
+    }
+
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         resource_type: "video",
@@ -194,8 +211,41 @@ const updateVideo = async (req, res) => {
   try {
     const video = await Videos.findByPk(videoId);
 
+    if (!videoTitle || !videoDesc) {
+      return res
+        .status(400)
+        .json({ message: "Video title and description are required." });
+    }
+
     if (!video) {
       return res.status(404).json({ message: "Video not found." });
+    }
+
+    // Lấy thông tin khóa học mà video này thuộc về
+    const courseVideo = await CourseVideos.findOne({ where: { videoId } });
+    if (!courseVideo) {
+      return res.status(404).json({ message: "Course association not found." });
+    }
+
+    const courseId = courseVideo.courseId;
+
+    // Kiểm tra xem tiêu đề video có bị trùng trong cùng khóa học không
+    const existingVideo = await Videos.findOne({
+      include: {
+        model: CourseVideos,
+        as: "CourseVideos", // Sử dụng alias định nghĩa trong model
+        where: { courseId },
+      },
+      where: {
+        videoTitle,
+        id: { [Op.ne]: videoId }, // Loại trừ video hiện tại
+      },
+    });
+
+    if (existingVideo) {
+      return res.status(400).json({
+        message: "A video with the same title already exists in this course.",
+      });
     }
 
     let videoURL = video.videoURL;
