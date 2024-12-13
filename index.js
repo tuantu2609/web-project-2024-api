@@ -69,7 +69,7 @@ app.get("/test-ci", (req, res) => {
 });
 
 db.sequelize.sync().then(() => {
-  app.listen(3001, () => {
-    console.log("Server running on port 3001");
+  app.listen(8080, () => {
+    console.log("Server running on port 8080");
   });
 });
