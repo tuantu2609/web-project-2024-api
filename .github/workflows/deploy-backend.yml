@@ -1,0 +1,54 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout code from the repository
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # Set up Node.js environment
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+
+    # Install dependencies
+    - name: Install dependencies
+      run: |
+        npm install
+
+    # Add the known_hosts file to trust the server's SSH key
+    - name: Add VM to known_hosts
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+        chmod 600 ~/.ssh/known_hosts
+
+    # Setup SSH agent and add private key
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    # Deploy the backend to VM
+    - name: Deploy to VM2
+      run: |
+        ssh -o StrictHostKeyChecking=yes thienly@20.2.25.99 << 'EOF'
+          sudo chown -R thienly:thienly /home/thienly/web-project-2024-api
+          sudo chmod -R 755 /home/thienly/web-project-2024-api
+        EOF
+        scp -r ./ thienly@20.2.25.99:/home/thienly/web-project-2024-api/
+        ssh -o StrictHostKeyChecking=yes thienly@20.2.25.99 << 'EOF'
+          cd /home/thienly/web-project-2024-api
+          npm install --production
+          pm2 stop index.js || true
+          pm2 start index.js
+        EOF
