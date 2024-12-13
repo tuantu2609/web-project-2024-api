@@ -63,6 +63,10 @@ app.use("/search", searchRouter);
 const notificationRouter = require("./routes/Notifications");
 app.use("/notifications", notificationRouter);
 
+// Test endpoint for CI/CD
+app.get("/test-ci", (req, res) => {
+  res.json({ message: "CI/CD Deployment Successful!" });
+});
 
 db.sequelize.sync().then(() => {
   app.listen(3001, () => {
