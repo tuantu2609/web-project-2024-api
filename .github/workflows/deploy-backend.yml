@@ -20,10 +20,10 @@ jobs:
       with:
         node-version: '20'
 
-    # Install dependencies locally to reduce workload on the server
+    # Install dependencies
     - name: Install dependencies
       run: |
-        npm install --production
+        npm install
 
     # Add the known_hosts file to trust the server's SSH key
     - name: Add VM to known_hosts
@@ -38,20 +38,17 @@ jobs:
       with:
         ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    # Deploy only necessary files to VM
+    # Deploy the backend to VM
     - name: Deploy to VM2
       run: |
-        # Archive only required files (excluding node_modules, .git, etc.)
-        tar --exclude='./node_modules' --exclude='./.git' -czf backend.tar.gz . 
-
-        # Transfer the archive to the server
-        scp backend.tar.gz thienly@20.2.25.99:/home/thienly/web-project-2024-api/
-
-        # SSH into the server to extract the archive and restart the app
+        ssh -o StrictHostKeyChecking=yes thienly@20.2.25.99 << 'EOF'
+          sudo chown -R thienly:thienly /home/thienly/web-project-2024-api
+          sudo chmod -R 755 /home/thienly/web-project-2024-api
+        EOF
+        scp -r ./ thienly@20.2.25.99:/home/thienly/web-project-2024-api/
         ssh -o StrictHostKeyChecking=yes thienly@20.2.25.99 << 'EOF'
           cd /home/thienly/web-project-2024-api
-          tar -xzf backend.tar.gz
-          rm backend.tar.gz
+          npm install --production
           pm2 stop index.js || true
           pm2 start index.js
         EOF
