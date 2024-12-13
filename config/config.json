@@ -1,9 +1,9 @@
 {
   "development": {
     "username": "thienly",
-    "password": "T123",
+    "password": "T@123456789",
     "database": "webdb",
-    "host": "20.2.234.213",
+    "host": "thienlyserver.mysql.database.azure.com",
     "dialect": "mysql"
   },
   "test": {
