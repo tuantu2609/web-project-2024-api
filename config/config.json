@@ -1,9 +1,9 @@
 {
   "development": {
-    "username": "root",
-    "password": null,
+    "username": "thienly",
+    "password": "T123",
     "database": "webdb",
-    "host": "localhost",
+    "host": "20.2.234.213",
     "dialect": "mysql"
   },
   "test": {
