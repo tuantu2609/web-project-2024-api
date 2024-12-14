@@ -16,8 +16,8 @@
   "production": {
     "username": "thienly",
     "password": "T@123456789",
-    "database": "thienlyserver.mysql.database.azure.com",
-    "host": "127.0.0.1",
+    "database": "webdb",
+    "host": "thienlyserver.mysql.database.azure.com",
     "dialect": "mysql",
     "dialectOptions": {
       "ssl": {
