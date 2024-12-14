@@ -68,7 +68,7 @@ app.get("/test-ci", (req, res) => {
   res.json({ message: "CI/CD Deployment Successful!!" });
 });
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3001;
 
 db.sequelize.sync().then(() => {
   app.listen(PORT, () => {
