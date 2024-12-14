@@ -4,7 +4,13 @@
     "password": "T@123456789",
     "database": "webdb",
     "host": "thienlyserver.mysql.database.azure.com",
-    "dialect": "mysql"
+    "dialect": "mysql",
+    "dialectOptions": {
+      "ssl": {
+        "require": true,
+        "rejectUnauthorized": false
+      }
+    }
   },
   "test": {
     "username": "root",
